@@ -1,10 +1,10 @@
 import sys
-# HOME_DIR == 
+# HOME_DIR ==
 sys.path.append('/Users/khangnguyen/Desktop/Google API/Google Sheets')
 sys.path.append('/Users/khangnguyen/Desktop/Google API/Google Calendar')
 
-from quickstartCal.py
-from quickstartSheets.py
+import quickstartCal.py
+import quickstartSheets.py
 
 SID = int(sys.argv[0])
 
@@ -26,9 +26,8 @@ def get_events(my_groups):
         	splitgroups = groups[0].split(":")
         	for group in splitgroups:
           		if group in my_groups:
-            			if event not in sortedevents:	
+            			if event not in sortedevents:
                 			sortedevents.append(event)
         except KeyError:
           None
     return sortedevents
-        
