@@ -83,4 +83,4 @@ def main(SID):
     return sortedgroups
 
 if __name__ == '__main__':
-    main(26201080)
+    main()

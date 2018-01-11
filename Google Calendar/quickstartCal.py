@@ -60,29 +60,14 @@ def main():
     http = credentials.authorize(httplib2.Http())
     service = discovery.build('calendar', 'v3', http=http)
 
-    now = datetime.datetime(2017, 11, 1).isoformat() + 'Z' # 'Z' indicates UTC time
+    now = datetime.datetime.utcnow().isoformat() + 'Z' # 'Z' indicates UTC time
     print('Getting the upcoming 100 events')
     eventsResult = service.events().list(
-        calendarId='berkeley.edu_f8ah4tood1shrd6vhv398lt2ss@group.calendar.google.com', timeMin=now, maxResults=100, singleEvents=True,
+        calendarId='berkeley.edu_f8ah4tood1shrd6vhv398lt2ss@group.calendar.google.com', timeMin=now, maxResults=10, singleEvents=True,
         orderBy='startTime').execute()
     events = eventsResult.get('items', [])
 
     return events
-
-""" if not events:
-        print('No upcoming events found.')
-    for event in events:
-        start = event['start'].get('dateTime', event['start'].get('date'))
-
-
-				print(start[0:10], start[11:25]) # YYYY/MM/DD XX:XX:XX-XX:XX
-        print(event['summary']) # Title
-        try:
-            print(event['description']) # Description in string format
-        except KeyError:
-            print('No description')
-        print()
-"""
 
 if __name__ == '__main__':
     main()
