@@ -63,7 +63,7 @@ def main():
     now = datetime.datetime.utcnow().isoformat() + 'Z' # 'Z' indicates UTC time
     print('Getting the upcoming 100 events')
     eventsResult = service.events().list(
-        calendarId='berkeley.edu_f8ah4tood1shrd6vhv398lt2ss@group.calendar.google.com', timeMin=now, maxResults=10, singleEvents=True,
+        calendarId='berkeley.edu_u7ffo9gvmuo9ijovg6vcjf07v4@group.calendar.google.com', timeMin=now, maxResults=10, singleEvents=True,
         orderBy='startTime').execute()
     events = eventsResult.get('items', [])
 

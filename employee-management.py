@@ -1,4 +1,5 @@
 import sys
+
 # HOME_DIR ==
 sys.path.append('/Users/khangnguyen/Desktop/employee-management/GoogleSheets')
 sys.path.append('/Users/khangnguyen/Desktop/employee-management/GoogleCalendar')
@@ -6,12 +7,13 @@ sys.path.append('/Users/khangnguyen/Desktop/employee-management/GoogleCalendar')
 import quickstartCal
 import quickstartSheets
 
-SID = int(sys.argv[0])
+print(sys.argv[1])
+#SID = int(sys.argv[0])
 
 def get_groups(SID):
   	return quickstartSheets.py.main(SID)
 
-groups = get_groups(SID)
+#groups = get_groups(SID)
 
 def get_events(my_groups):
     events = quickstartCal.py.main()
