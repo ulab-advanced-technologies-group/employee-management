@@ -1,14 +1,10 @@
 import sys
+SID = int(sys.argv[1])
 
 # HOME_DIR ==
-sys.path.append('/Users/khangnguyen/Desktop/employee-management/GoogleSheets')
-sys.path.append('/Users/khangnguyen/Desktop/employee-management/GoogleCalendar')
 
-import quickstartCal
-import quickstartSheets
-
-print(sys.argv[1])
-#SID = int(sys.argv[0])
+from GoogleCalendar import quickstartCal
+from GoogleSheets import quickstartSheets
 
 def get_groups(SID):
   	return quickstartSheets.py.main(SID)
