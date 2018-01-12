@@ -21,14 +21,14 @@ class Group :
         from GoogleCalendar import quickstartCal
         from GoogleSheets import quickstartSheets
 
-        def addPerson(Person) :
-            if Person in self.people :
-                print("This person already exists in the group.")
-            else :
-                self.people.append(Person)
+    def addPerson(Person) :
+        if Person in self.people :
+            print("This person already exists in the group.")
+        else :
+            self.people.append(Person)
 
-        def removePerson(Person) :
-            if Person not in self.people :
-                print("This person does not exist in the group.")
-            else
-                self.people.remove(Person)
+    def removePerson(Person) :
+        if Person not in self.people :
+            print("This person does not exist in the group.")
+        else
+            self.people.remove(Person)
