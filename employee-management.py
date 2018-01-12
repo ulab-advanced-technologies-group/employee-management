@@ -1,6 +1,5 @@
 import sys
 SID = int(sys.argv[1])
-
 # HOME_DIR ==
 
 from GoogleCalendar import quickstartCal
