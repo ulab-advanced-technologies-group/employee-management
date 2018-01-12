@@ -76,10 +76,13 @@ def main(SID):
     for rangeName in groups:
         result = service.spreadsheets().values().get(spreadsheetId=spreadsheetId, range=rangeName).execute()
         values = result.get('values', [])
-        SIDindex = values[0].index("SID")
-        for row in values:
-            if str(SID) == row[SIDindex]:
-                sortedgroups.append(rangeName)
+        try:
+            SIDindex = values[0].index("SID")
+            for row in values:
+                if str(SID) == row[SIDindex]:
+                    sortedgroups.append(rangeName)
+        except:
+            pass # Ignores sheets that do not have SID as a column
     return sortedgroups
 
 if __name__ == '__main__':
