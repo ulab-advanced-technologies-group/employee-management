@@ -1,7 +1,4 @@
 import sys
-SID = int(sys.argv[1])
-# HOME_DIR ==
-
 from GoogleCalendar import quickstartCal
 from GoogleSheets import quickstartSheets
 
@@ -29,3 +26,6 @@ def get_events(my_groups):
             except KeyError:
                 None
     return sortedevents
+
+if __name__ == "__main__":
+    SID = int(sys.argv[1])
