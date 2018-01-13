@@ -61,7 +61,7 @@ def main():
     service = discovery.build('calendar', 'v3', http=http)
 
     now = datetime.datetime.utcnow().isoformat() + 'Z' # 'Z' indicates UTC time
-    print('Getting the upcoming 100 events')
+    print('Getting the upcoming 10 events')
     eventsResult = service.events().list(
         calendarId='berkeley.edu_u7ffo9gvmuo9ijovg6vcjf07v4@group.calendar.google.com', timeMin=now, maxResults=10, singleEvents=True,
         orderBy='startTime').execute()
