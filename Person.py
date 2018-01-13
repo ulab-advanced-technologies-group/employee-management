@@ -6,14 +6,9 @@ class Person:
         self.SID = SID
         self.MiddleName = MiddleName
         self.Email = Email
-        self.PhoneNumber = None
+        self.PhoneNumber = PhoneNumber
         self.DietaryPreferences = None
         self.schedule = None
-
-    def __init__(self, FirstName, LastName, SID) :
-        self.FirstName = FirstName
-        self.LastName = LastName
-        self.SID = SID
 
     def addRole(Role) :
         self.Roles.append(Role)

@@ -85,5 +85,32 @@ def main(SID):
             pass # Ignores sheets that do not have SID as a column
     return sortedgroups
 
+def sheets():
+    credentials = get_credentials()
+    http = credentials.authorize(httplib2.Http())
+    discoveryUrl = ('https://sheets.googleapis.com/$discovery/rest?'
+                    'version=v4')
+    service = discovery.build('sheets', 'v4', http=http,
+                              discoveryServiceUrl=discoveryUrl)
+
+    spreadsheetId = '1k5OgXFL_o99gbgqD_MJt6LuggL4KRGBI27SIW45-FgQ'
+    sheet_metadata = service.spreadsheets().get(spreadsheetId='1k5OgXFL_o99gbgqD_MJt6LuggL4KRGBI27SIW45-FgQ').execute()
+    sheets = sheet_metadata.get('sheets', '')
+
+    requests = []
+    # Change the spreadsheet's title.
+    requests.append({
+        'updateSpreadsheetProperties': {
+            'properties': {'title': 'Roster2'},
+            'fields': 'title'
+        }
+    })
+
+    body = {'requests': requests}
+    response = service.spreadsheets().batchUpdate(spreadsheetId='1k5OgXFL_o99gbgqD_MJt6LuggL4KRGBI27SIW45-FgQ', body=body).execute()
+    find_replace_response = response.get('replies')[1].get('findReplace')
+    print('{0} replacements made.'.format(
+        find_replace_response.get('occurrencesChanged')))
+
 if __name__ == '__main__':
     main()
