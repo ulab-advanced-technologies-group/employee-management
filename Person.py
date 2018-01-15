@@ -9,11 +9,15 @@ class Person:
         self.PhoneNumber = None
         self.DietaryPreferences = None
         self.schedule = None
+        self.Groups = []
 
     def __init__(self, FirstName, LastName, SID) :
         self.FirstName = FirstName
         self.LastName = LastName
         self.SID = SID
+
+    def addGroup(Group) :
+        self.Groups.append(Group)
 
     def addRole(Role) :
         self.Roles.append(Role)

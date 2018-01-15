@@ -1,11 +1,12 @@
 import sys
+SID = int(sys.argv[1])
+
 from GoogleCalendar import quickstartCal
 from GoogleSheets import quickstartSheets
 
 def get_groups(SID):
   	return quickstartSheets.py.main(SID)
 
-#groups = get_groups(SID)
 
 def get_events(my_groups):
     events = quickstartCal.py.main()
@@ -26,6 +27,3 @@ def get_events(my_groups):
             except KeyError:
                 None
     return sortedevents
-
-if __name__ == "__main__":
-    SID = int(sys.argv[1])
