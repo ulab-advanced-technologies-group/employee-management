@@ -160,11 +160,21 @@ def create_group(title, parent=''):
         sheetId = response.get('replies')[0].get('addSheet').get('properties').get('sheetId')
         column = service.spreadsheets().values().batchUpdate(spreadsheetId='1k5OgXFL_o99gbgqD_MJt6LuggL4KRGBI27SIW45-FgQ', body=body2).execute()
 
+    #add group to parent's subgroup
+
 def remove_group(title):
     sheetId = get_sheetid(title)
     service = main()
     result = service.spreadsheets().values().get(spreadsheetId='1k5OgXFL_o99gbgqD_MJt6LuggL4KRGBI27SIW45-FgQ', range=title).execute()
     values = result.get('values', [])
+
+    mainrosterid = get_sheetid(mainroster)
+    mainroster = service.spreadsheets().values().get(spreadsheetId='1k5OgXFL_o99gbgqD_MJt6LuggL4KRGBI27SIW45-FgQ', range='mainroster').execute()
+    print(mainroster)
+    title_rows = mainroster.get('values', [])[0]
+    print(title_rows)
+    column_index = title_rows.index(title)
+    print(column_index)
 
     subgroup_index = values[0].index("Subgroups")
     for row_index in range(1,len(values)):
@@ -210,10 +220,6 @@ def remove_group(title):
                 }
             }
         ]
-        mainrosterid = get_sheetid(mainroster)
-        mainroster = service.spreadsheets().values().get(spreadsheetId='1k5OgXFL_o99gbgqD_MJt6LuggL4KRGBI27SIW45-FgQ', range='mainroster').execute()
-        title_rows = mainroster.get('values', [])[0]
-        column_index = title_rows.index(title)
         delmaincolumnreq = [{
             "deleteDimension": {
                 "range": {
