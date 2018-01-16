@@ -5,7 +5,7 @@ from GoogleCalendar import quickstartCal
 from GoogleSheets import quickstartSheets
 
 def get_groups(SID):
-  	return quickstartSheets.main(SID)
+  	return quickstartSheets.sortedgroups(SID)
 
 def get_events(my_groups):
     events = quickstartCal.main()
