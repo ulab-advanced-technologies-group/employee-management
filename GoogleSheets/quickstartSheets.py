@@ -210,16 +210,26 @@ def remove_group(title):
                 }
             }
         ]
+        mainrosterid = get_sheetid(mainroster)
+        mainroster = service.spreadsheets().values().get(spreadsheetId='1k5OgXFL_o99gbgqD_MJt6LuggL4KRGBI27SIW45-FgQ', range='mainroster').execute()
+        title_rows = mainroster.get('values', [])[0]
+        column_index = title_rows.index(title)
         delmaincolumnreq = [{
             "deleteDimension": {
-
+                "range": {
+                  "sheetId": mainrosterid,
+                  "dimension": "COLUMNS",
+                  "startIndex": column_index,
+                  "endIndex":   column_index + 1
+                }
             }
-
             }
         ]
         body2 = {"requests": delsheetrequest}
+        body3 = {"requests": delmaincolumnreq}
         deleteSubgroups = service.spreadsheets().values().batchUpdate(spreadsheetId='1k5OgXFL_o99gbgqD_MJt6LuggL4KRGBI27SIW45-FgQ', body=body).execute()
         deleteCurgroup = service.spreadsheets().batchUpdate(spreadsheetId='1k5OgXFL_o99gbgqD_MJt6LuggL4KRGBI27SIW45-FgQ', body=body2).execute()
+        deleteMainColumn = service.spreadsheets().batchUpdate(spreadsheetId='1k5OgXFL_o99gbgqD_MJt6LuggL4KRGBI27SIW45-FgQ', body=body3).execute()
 
 # remove column in mainroster
 
