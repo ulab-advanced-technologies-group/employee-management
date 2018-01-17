@@ -7,20 +7,6 @@ class Group :
     def addsubGroup(self, obj) :
         self.subgroups.append(obj)
 
-    def createSheet(self) :
-        import sys
-        SID = int(sys.argv[1])
-
-        from GoogleCalendar import quickstartCal
-        from GoogleSheets import quickstartSheets
-
-    def removeSheet(self) :
-        import sys
-        SID = int(sys.argv[1])
-
-        from GoogleCalendar import quickstartCal
-        from GoogleSheets import quickstartSheets
-
     def addPerson(Person) :
         if Person in self.people :
             print("This person already exists in the group.")

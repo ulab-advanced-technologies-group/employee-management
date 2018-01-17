@@ -2,10 +2,10 @@ import sys
 SID = int(sys.argv[1])
 
 from GoogleCalendar import quickstartCal
-from GoogleSheets import employee-management
+from GoogleSheets import employee_management
 
 def get_groups(SID):
-  	return employee-management.groups(SID)
+  	return employee_management.groups(SID)
 
 def get_events(my_groups):
     events = quickstartCal.main()
