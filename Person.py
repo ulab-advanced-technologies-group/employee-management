@@ -11,7 +11,6 @@ class Person:
         self.schedule = None
         self.Groups = []
 
-<<<<<<< HEAD
     def __init__(self, FirstName, LastName, SID) :
         self.FirstName = FirstName
         self.LastName = LastName
@@ -20,8 +19,6 @@ class Person:
     def addGroup(Group) :
         self.Groups.append(Group)
 
-=======
->>>>>>> f341050710447d401d6ac9a3908f344a0efb3fc7
     def addRole(Role) :
         self.Roles.append(Role)
 
