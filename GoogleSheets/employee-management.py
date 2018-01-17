@@ -84,7 +84,8 @@ def groups(SID):
             if str(SID) == values[row_index][SIDindex]:
                 SIDrow = row_index
                 break
-        groupIndexStart = 5
+        # Later revision: iterate through top row until first instance starting with 'ulab' and use that index for group start instead
+        groupIndexStart = 7
         for group_index in range(groupIndexStart, len(values[SIDrow])):
             cell = values[SIDrow][group_index]
             if cell == 'y':
@@ -295,6 +296,61 @@ def get_sheetid(sheet_title):
             sheetId = sheet.get("properties", {}).get("sheetId")
             return sheetId
     return -1
+
+def add_person_to_mainroster(firstname, lastname, calnet, SID, email, phonenumber, supervisor):
+    service = main()
+    mainroster = service.spreadsheets().values().get(spreadsheetId='1k5OgXFL_o99gbgqD_MJt6LuggL4KRGBI27SIW45-FgQ', range='mainroster').execute()
+    values = mainroster.get('values', [])
+    num_rows = len(values)
+    num_cols = len(values[0])
+    default_values = [firstname, lastname, calnet, SID, email, phonenumber, supervisor]
+    letter = num_to_letter(num_cols)
+    for i in range(num_cols - 7): # change number depending column before groups
+        default_values.append('n')
+    rangeName = '!A' + str(num_rows + 1) + ':' + letter + str(num_rows + 1)
+    body = {
+            'valueInputOption': "USER_ENTERED",
+            "data": [
+                {
+                    "range": 'mainroster' + rangeName,
+                    "majorDimension": "ROWS",
+                    "values": [
+                        default_values
+                    ]
+                }
+            ]
+    }
+    addMainrow = service.spreadsheets().values().batchUpdate(spreadsheetId='1k5OgXFL_o99gbgqD_MJt6LuggL4KRGBI27SIW45-FgQ', body=body).execute()
+
+def del_person_from_ulab(SID):
+    # remove from group function ----
+    service = main()
+    mainrosterid = get_sheetid('mainroster')
+    mainroster = service.spreadsheets().values().get(spreadsheetId='1k5OgXFL_o99gbgqD_MJt6LuggL4KRGBI27SIW45-FgQ', range='mainroster').execute()
+    values = mainroster.get('values', [])
+    roworder = 0
+    requests = []
+    try:
+        SIDindex = values[0].index("SID")
+        for row in values:
+            if str(SID) == row[SIDindex]:
+                requests.append({
+                    'deleteDimension': {
+                        'range': {
+                            'sheetId': mainrosterid,
+                            'dimension': 'ROWS',
+                            'startIndex': roworder,
+                            'endIndex': roworder + 1,
+                        }
+                    }
+                }
+            )
+            roworder += 1
+    except:
+        pass # Ignores sheets that do not have SID as a column
+    if requests:
+        body = {'requests': requests}
+        response = service.spreadsheets().batchUpdate(spreadsheetId='1k5OgXFL_o99gbgqD_MJt6LuggL4KRGBI27SIW45-FgQ', body=body).execute()
 
 def remove_from_all(SID):
     credentials = get_credentials()
