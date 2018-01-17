@@ -84,7 +84,7 @@ def groups(SID):
             if str(SID) == values[row_index][SIDindex]:
                 SIDrow = row_index
                 break
-        groupIndexStart = 5
+        groupIndexStart = 5 #SUBJECT TO CHANGE
         for group_index in range(groupIndexStart, len(values[SIDrow])):
             cell = values[SIDrow][group_index]
             if cell == 'y':
@@ -211,6 +211,39 @@ def create_group(title, parent=''):
             ]
     }
     addMainColumn = service.spreadsheets().values().batchUpdate(spreadsheetId='1k5OgXFL_o99gbgqD_MJt6LuggL4KRGBI27SIW45-FgQ', body=body4).execute()
+
+def total_num_groups() :
+    return len(get_all_groups())
+
+def get_all_groups() :
+    service = main()
+    groups = []
+    sheets = get_sheets(service)
+    mainroster = sheets[0].get("properties", {}).get("title", "Sheet1") # Assumes mainroster is 1st sheet
+    result = service.spreadsheets().values().get(spreadsheetId='1k5OgXFL_o99gbgqD_MJt6LuggL4KRGBI27SIW45-FgQ', range=mainroster).execute()
+    values = result.get('values', [])
+    try :
+        groupIndexStart = group_start_index()
+        for group_index in range(groupIndexStart, len(values[0])) :
+            groups.append(values[0][group_index])
+    except:
+        pass # Ignores sheets
+    return groups
+
+def group_start_index() :
+    service = main()
+    sheets = get_sheets(service)
+    mainroster = sheets[0].get("properties", {}).get("title", "Sheet1") # Assumes mainroster is 1st sheet
+    result = service.spreadsheets().values().get(spreadsheetId='1k5OgXFL_o99gbgqD_MJt6LuggL4KRGBI27SIW45-FgQ', range=mainroster).execute()
+    values = result.get('values', [])
+    try :
+        for group_index in range(0, len(values[0])) :
+            if values[0][group_index].find("ulab") != -1 :
+                break
+    except :
+        pass # Ignores Sheets
+
+    return group_index
 
 def remove_group(title):
     sheetId = get_sheetid(title)
