@@ -374,11 +374,10 @@ def del_person_from_group(SID, group):
     subgroup_index = values[0].index("Subgroups")
     #### Recursive Call
     for row_index in range(1,len(values)):
-        try:
+        if values[1][subgroup_index] != '':
             subgroup_title = values[row_index][subgroup_index]
+            print(subgroup_title)
             del_person_from_group(SID, subgroup_title)
-        except:
-            pass
     #### Replacing SID column
     SID_column = []
     count = 1
@@ -404,17 +403,16 @@ def del_person_from_group(SID, group):
     #### Replacing Role Column
     role_column = []
     count = 1
-    if values[1][0] != '':
+    if values[1][role_index] != '':
         for row_index in range(1, len(values)):
             roles = values[row_index][role_index]
             role_column.append(roles)
             SIDvalue = values[row_index][SID_index]
             if SIDvalue == str(SID):
                 role = values[row_index][role_index]
+                role_column.remove(role)
+                role_column.append('')
             count += 1
-
-        role_column.remove(role)
-        role_column.append('')
 
     body2 = {
         'valueInputOption': "USER_ENTERED",
@@ -426,10 +424,35 @@ def del_person_from_group(SID, group):
             }
         ]
     }
-    replaceSIDs = service.spreadsheets().values().batchUpdate(spreadsheetId=spreadsheet_Id, body=body).execute()
-    replaceRoles = service.spreadsheets().values().batchUpdate(spreadsheetId=spreadsheet_Id, body=body2).execute()
 
     # replace 'y' w/ 'n'
+    mainroster = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range='mainroster').execute()
+    main_values = mainroster.get('values', [])
+    main_SID_index = main_values[0].index('SID')
+    main_group_index = main_values[0].index(group)
+    num_cols = len(main_values[0])
+    letter = num_to_letter(num_cols)
+    for row_index in range(1, len(main_values)):
+        if str(SID) == main_values[row_index][main_SID_index]:
+            row = row_index
+            main_values[row_index][main_group_index] = 'n'
+            rangeName = '!A' + str(row_index) + ':' + letter + str(row_index)
+            break
+
+    body3 = {
+        'valueInputOption': "USER_ENTERED",
+        "data": [
+            {
+                "range": 'mainroster',
+                "majorDimension": "ROWS",
+                "values": main_values
+            }
+        ]
+    }
+
+    replaceSIDs = service.spreadsheets().values().batchUpdate(spreadsheetId=spreadsheet_Id, body=body).execute()
+    replaceRoles = service.spreadsheets().values().batchUpdate(spreadsheetId=spreadsheet_Id, body=body2).execute()
+    replaceMain = service.spreadsheets().values().batchUpdate(spreadsheetId=spreadsheet_Id, body=body3).execute()
 
 def del_person_from_ulab(SID):
     del_person_from_group(SID, 'ulab')
