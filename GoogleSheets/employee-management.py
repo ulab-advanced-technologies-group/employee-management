@@ -246,17 +246,17 @@ def group_start_index() :
 
     return group_index
 
-def remove_group(title):
+def remove_group(title) :
     sheetId = get_sheetid(title)
-    if sheetId != -1:
+    if sheetId != -1 :
         service = main()
         result = service.spreadsheets().values().get(spreadsheetId='1k5OgXFL_o99gbgqD_MJt6LuggL4KRGBI27SIW45-FgQ', range=title).execute()
         values = result.get('values', [])
 
         subgroup_index = values[0].index("Subgroups")
-        for row_index in range(1,len(values)):
+        for row_index in range(1,len(values)) :
             subgroup_title = values[row_index][subgroup_index]
-            if subgroup_title:
+            if subgroup_title :
                 remove_group(subgroup_title)
         parent_index = values[0].index("Parent")
         parent_title = values[1][parent_index]
@@ -275,7 +275,7 @@ def remove_group(title):
                         parent_subgroup_column.append(subgroup)
                         removed = True
                     count += 1
-            if removed:
+            if removed :
                 parent_subgroup_column.append('')
             body = {
                     'valueInputOption': "USER_ENTERED",
