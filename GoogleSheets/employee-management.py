@@ -20,8 +20,6 @@ SCOPES = 'https://www.googleapis.com/auth/spreadsheets.readonly'
 CLIENT_SECRET_FILE = 'client_secret.json'
 APPLICATION_NAME = 'Google Sheets API Python Quickstart'
 
-spreadsheet_Id = '1k5OgXFL_o99gbgqD_MJt6LuggL4KRGBI27SIW45-FgQ'
-
 def get_credentials():
     """Gets valid user credentials from storage.
 
@@ -70,12 +68,11 @@ def get_sheets(service):
     sheets = sheet_metadata.get('sheets', '')
     return sheets
 
+spreadsheet_Id = '1k5OgXFL_o99gbgqD_MJt6LuggL4KRGBI27SIW45-FgQ'
 service = main()
 sheets = get_sheets(service)
 
 def groups(SID):
-    service = main()
-    sheets = get_sheets(service)
     sortedgroups = []
     mainroster = sheets[0].get("properties", {}).get("title", "Sheet1") # Assumes mainroster is 1st sheet
     result = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=mainroster).execute()
@@ -99,8 +96,6 @@ def groups(SID):
 
 def person_from_group(group):
     persons = []
-    service = main()
-    sheets = get_sheets(service)
     mainroster = sheets[0].get("properties", {}).get("title", "Sheet1") # Assumes mainroster is 1st sheet
     result = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=mainroster).execute()
     values = result.get('values', [])
@@ -125,7 +120,6 @@ def num_to_letter(n):
     return string
 
 def create_group(title, parent='ulab'):
-    service = main()
     requests = []
     values = [
     ["SID", "Role", "Subgroups", "Parent"], # Additional rows
@@ -220,9 +214,7 @@ def total_num_groups() :
     return len(get_all_groups())
 
 def get_all_groups() :
-    service = main()
     groups = []
-    sheets = get_sheets(service)
     mainroster = sheets[0].get("properties", {}).get("title", "Sheet1") # Assumes mainroster is 1st sheet
     result = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=mainroster).execute()
     values = result.get('values', [])
@@ -235,8 +227,6 @@ def get_all_groups() :
     return groups
 
 def group_start_index() :
-    service = main()
-    sheets = get_sheets(service)
     mainroster = sheets[0].get("properties", {}).get("title", "Sheet1") # Assumes mainroster is 1st sheet
     result = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=mainroster).execute()
     values = result.get('values', [])
@@ -254,10 +244,8 @@ def remove_group(title):
         return # Revise in future renditions (i.e. do not pass 'ulab' into fxn)
     sheetId = get_sheetid(title)
     if sheetId != -1:
-        service = main()
         result = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=title).execute()
         values = result.get('values', [])
-
         subgroup_index = values[0].index("Subgroups")
         for row_index in range(1,len(values)):
             subgroup_title = values[row_index][subgroup_index]
@@ -325,9 +313,6 @@ def remove_group(title):
 
 # Returns the sheet id for the given sheet title. Returns -1 if no sheet title matches.
 def get_sheetid(sheet_title):
-    service = main()
-    sheet_metadata = service.spreadsheets().get(spreadsheetId=spreadsheet_Id).execute()
-    sheets = sheet_metadata.get('sheets', '')
     for sheet in sheets:
         title = sheet.get("properties", {}).get("title", "Sheet1")
         if title == sheet_title:
@@ -336,7 +321,6 @@ def get_sheetid(sheet_title):
     return -1
 
 def add_person_to_mainroster(firstname, lastname, calnet, SID, email, phonenumber, supervisor):
-    service = main()
     mainroster = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range='mainroster').execute()
     values = mainroster.get('values', [])
     num_rows = len(values)
@@ -366,7 +350,7 @@ def add_person_to_group(SID, role, group):
     return
 
 def del_person_from_group(SID, group):
-    service = main()
+
     result = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=group).execute()
     values = result.get('values', [])
     SID_index = values[0].index('SID')
@@ -374,7 +358,7 @@ def del_person_from_group(SID, group):
     subgroup_index = values[0].index("Subgroups")
     #### Recursive Call
     for row_index in range(1,len(values)):
-        if values[1][subgroup_index] != '':
+        if values[1][subgroup_index] != '': # Checks if there is a subgroup
             subgroup_title = values[row_index][subgroup_index]
             print(subgroup_title)
             del_person_from_group(SID, subgroup_title)
@@ -456,7 +440,6 @@ def del_person_from_group(SID, group):
 
 def del_person_from_ulab(SID):
     del_person_from_group(SID, 'ulab')
-    service = main()
     mainrosterid = get_sheetid('mainroster')
     mainroster = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range='mainroster').execute()
     values = mainroster.get('values', [])
@@ -483,74 +466,6 @@ def del_person_from_ulab(SID):
     if requests:
         body = {'requests': requests}
         response = service.spreadsheets().batchUpdate(spreadsheetId=spreadsheet_Id, body=body).execute()
-
-def remove_from_all(SID):
-    credentials = get_credentials()
-    http = credentials.authorize(httplib2.Http())
-    discoveryUrl = ('https://sheets.googleapis.com/$discovery/rest?'
-                    'version=v4')
-    service = discovery.build('sheets', 'v4', http=http,
-                              discoveryServiceUrl=discoveryUrl)
-
-    spreadsheetId = spreadsheet_Id
-    sheet_metadata = service.spreadsheets().get(spreadsheetId=spreadsheet_Id).execute()
-    sheets = sheet_metadata.get('sheets', '')
-    groups = []
-    for sheet in sheets:
-        title = sheet.get("properties", {}).get("title", "Sheet1")
-        groups.append(title)
-
-    for group in groups:
-        remove_from_group(SID, group)
-
-def remove_from_group(SID, group):
-    credentials = get_credentials()
-    http = credentials.authorize(httplib2.Http())
-    discoveryUrl = ('https://sheets.googleapis.com/$discovery/rest?'
-                    'version=v4')
-    service = discovery.build('sheets', 'v4', http=http,
-                              discoveryServiceUrl=discoveryUrl)
-
-    spreadsheetId = spreadsheet_Id
-    sheet_metadata = service.spreadsheets().get(spreadsheetId=spreadsheet_Id).execute()
-    sheets = sheet_metadata.get('sheets', '')
-    groups = []
-    sheetIds = []
-    requests = []
-    for sheet in sheets:
-        title = sheet.get("properties", {}).get("title", "Sheet1")
-        sheetId = sheet.get("properties", {}).get("sheetId")
-        groups.append(title)
-        sheetIds.append(sheetId)
-    sheetorder = 0
-
-    for rangeName in groups:
-        if group == rangeName:
-            roworder = 0
-            result = service.spreadsheets().values().get(spreadsheetId=spreadsheetId, range=rangeName).execute()
-            values = result.get('values', [])
-            try:
-                SIDindex = values[0].index("SID")
-                for row in values:
-                    if str(SID) == row[SIDindex]:
-                        requests.append({
-                            'deleteDimension': {
-                                'range': {
-                                    'sheetId': sheetIds[sheetorder],
-                                    'dimension': 'ROWS',
-                                    'startIndex': roworder,
-                                    'endIndex': roworder + 1,
-                                }
-                            }
-                        }
-                    )
-                    roworder += 1
-            except:
-                pass # Ignores sheets that do not have SID as a column
-        sheetorder += 1
-    if requests:
-        body = {'requests': requests}
-        response = service.spreadsheets().batchUpdate(spreadsheetId=spreadsheetId, body=body).execute()
 
 if __name__ == '__main__':
     main()
