@@ -344,8 +344,91 @@ def add_person_to_mainroster(firstname, lastname, calnet, SID, email, phonenumbe
     addMainrow = service.spreadsheets().values().batchUpdate(spreadsheetId=spreadsheet_Id, body=body).execute()
 
 def add_person_to_group(SID, role, group):
-    # check if person in ulab before running
-    # check if person already in group before running
+    # Failure Cases
+    # 1. SID isn't in ulab
+    mainroster = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range='mainroster').execute()
+    main_values = mainroster.get('values', [])
+    main_SID_index = main_values[0].index('SID')
+    SID_list_main = []
+    for row_index in range(1, len(main_values)) :
+        SID_list_main.append(main_values[row_index][main_SID_index])
+    if str(SID) not in SID_list_main :
+        print('Person does not exist in ulab. Add them to ulab using the add_person_to_mainroster method.')
+        return
+    # 2. Person already exists in the group (SID and role are same)
+    result = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=group).execute()
+    group_values = result.get('values', [])
+    group_SID_index = group_values[0].index('SID')
+    group_roles_index = group_values[0].index('Role')
+    for row_index in range (1, len(group_values)) :
+        if group_values[row_index][group_SID_index] == str(SID) and group_values[row_index][group_roles_index] == str(role) :
+            print('Person already exists in this group with the requested SID and role.')
+            return
+    SID_column = []
+    count = 1
+    for row_index in range(1, len(group_values)):
+        SIDvalue = group_values[row_index][group_SID_index]
+        SID_column.append(SIDvalue)
+        count += 1
+
+    SID_column.append(SID)
+    count += 1
+    body = {
+        'valueInputOption': "USER_ENTERED",
+        "data": [
+            {
+                "range": group + "!A2:A" + str(count),
+                "majorDimension": "COLUMNS",
+                "values": [SID_column]
+            }
+        ]
+    }
+    #### Replacing Role Column
+    role_column = []
+    count = 1
+    for row_index in range(1, len(group_values)) :
+        roles = group_values[row_index][group_roles_index]
+        role_column.append(roles)
+        count += 1
+
+        role_column.append(role)
+    body2 = {
+        'valueInputOption': "USER_ENTERED",
+        "data": [
+            {
+                "range": group + "!B2:B" + str(count),
+                "majorDimension": "COLUMNS",
+                "values": [role_column]
+            }
+        ]
+    }
+
+    # replace 'n' w/ 'y'
+    main_group_index = main_values[0].index(group)
+    num_cols = len(main_values[0])
+    letter = num_to_letter(num_cols)
+    for row_index in range(1, len(main_values)):
+        if str(SID) == main_values[row_index][main_SID_index]:
+            row = row_index
+            main_values[row_index][main_group_index] = 'y'
+            rangeName = '!A' + str(row_index) + ':' + letter + str(row_index)
+            break
+
+    body3 = {
+        'valueInputOption': "USER_ENTERED",
+        "data": [
+            {
+                "range": 'mainroster',
+                "majorDimension": "ROWS",
+                "values": main_values
+            }
+        ]
+    }
+
+    replaceSIDs = service.spreadsheets().values().batchUpdate(spreadsheetId=spreadsheet_Id, body=body).execute()
+    replaceRoles = service.spreadsheets().values().batchUpdate(spreadsheetId=spreadsheet_Id, body=body2).execute()
+    replaceMain = service.spreadsheets().values().batchUpdate(spreadsheetId=spreadsheet_Id, body=body3).execute()
+
     return
 
 def del_person_from_group(SID, group):
@@ -356,8 +439,8 @@ def del_person_from_group(SID, group):
     role_index = values[0].index('Role')
     subgroup_index = values[0].index("Subgroups")
     #### Recursive Call
-    for row_index in range(1,len(values)):
-        if values[1][subgroup_index] != '': # Checks if there is a subgroup
+    for row_index in range(1,len(values)) :
+        if values[1][subgroup_index] != '' : # Checks if there is a subgroup
             subgroup_title = values[row_index][subgroup_index]
             print(subgroup_title)
             del_person_from_group(SID, subgroup_title)
@@ -372,7 +455,8 @@ def del_person_from_group(SID, group):
     if str(SID) in SID_column:
         SID_column.remove(str(SID))
         SID_column.append('')
-
+    else :
+        print('A person of this SID does not exist in the group.')
     body = {
         'valueInputOption': "USER_ENTERED",
         "data": [
@@ -387,11 +471,11 @@ def del_person_from_group(SID, group):
     role_column = []
     count = 1
     if values[1][role_index] != '':
-        for row_index in range(1, len(values)):
+        for row_index in range(1, len(values)) :
             roles = values[row_index][role_index]
             role_column.append(roles)
             SIDvalue = values[row_index][SID_index]
-            if SIDvalue == str(SID):
+            if SIDvalue == str(SID) :
                 role = values[row_index][role_index]
                 role_column.remove(role)
                 role_column.append('')
