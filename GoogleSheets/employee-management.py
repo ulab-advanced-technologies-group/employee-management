@@ -365,14 +365,15 @@ def add_person_to_group(SID, role, group):
             print('Person already exists in this group with the requested SID and role.')
             return
     SID_column = []
-    count = 1
-    for row_index in range(1, len(group_values)):
-        SIDvalue = group_values[row_index][group_SID_index]
-        SID_column.append(SIDvalue)
-        count += 1
+    count = 2
+
+    if group_values[1][group_SID_index] != '':
+        for row_index in range(1, len(group_values)):
+            SIDvalue = group_values[row_index][group_SID_index]
+            SID_column.append(SIDvalue)
+            count += 1
 
     SID_column.append(SID)
-    count += 1
     body = {
         'valueInputOption': "USER_ENTERED",
         "data": [
@@ -385,13 +386,15 @@ def add_person_to_group(SID, role, group):
     }
     #### Replacing Role Column
     role_column = []
-    count = 1
-    for row_index in range(1, len(group_values)) :
-        roles = group_values[row_index][group_roles_index]
-        role_column.append(roles)
-        count += 1
+    count = 2
 
-        role_column.append(role)
+    if group_values[1][group_roles_index] != '':
+        for row_index in range(1, len(group_values)) :
+            roles = group_values[row_index][group_roles_index]
+            role_column.append(roles)
+            count += 1
+
+    role_column.append(role)
     body2 = {
         'valueInputOption': "USER_ENTERED",
         "data": [
@@ -429,10 +432,7 @@ def add_person_to_group(SID, role, group):
     replaceRoles = service.spreadsheets().values().batchUpdate(spreadsheetId=spreadsheet_Id, body=body2).execute()
     replaceMain = service.spreadsheets().values().batchUpdate(spreadsheetId=spreadsheet_Id, body=body3).execute()
 
-    return
-
 def del_person_from_group(SID, group):
-
     result = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=group).execute()
     values = result.get('values', [])
     SID_index = values[0].index('SID')
