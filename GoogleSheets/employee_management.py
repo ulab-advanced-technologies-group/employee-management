@@ -7,6 +7,8 @@ from apiclient import discovery
 from oauth2client import client
 from oauth2client import tools
 from oauth2client.file import Storage
+from Group import Group
+from Person import Person
 
 # try:
 #     import argparse
@@ -549,6 +551,22 @@ def del_person_from_ulab(SID):
     if requests:
         body = {'requests': requests}
         response = service.spreadsheets().batchUpdate(spreadsheetId=spreadsheet_Id, body=body).execute()
+
+    # Returns the Group object corresponding to the given group name. If there 
+    # is no group of this name, returns None. This function is used in the Group class as well.
+    # Needs to create a Group instance according to the constructor defined in the Group class and return that instance. 
+    # The parent field of Group is another Group and the subgroups field is a list of subgroup names. 
+    # So, to get the Group <group_name> you would also need to get the parent group. 
+    # (Just call get_group on the parent group name for this.) 
+    def get_group(group_name):
+        pass
+
+    # Returns the Person object corresponding to the given SID. If there is no person with this SID, returns None.
+    # Needs access to the spreadsheets. Needs to create a Person instance according to the constructor defined in the Person class.
+    # For now just create the Person instance with basic field information (name, sid, email, etc.). We can add other fields later.
+    def get_person(SID):
+        pass
+
 
 if __name__ == '__main__':
     main()
