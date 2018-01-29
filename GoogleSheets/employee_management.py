@@ -1,4 +1,3 @@
-
 from __future__ import print_function
 import httplib2
 import os
@@ -7,8 +6,6 @@ from apiclient import discovery
 from oauth2client import client
 from oauth2client import tools
 from oauth2client.file import Storage
-from Group import Group
-from Person import Person
 
 # try:
 #     import argparse
@@ -21,6 +18,8 @@ from Person import Person
 SCOPES = 'https://www.googleapis.com/auth/spreadsheets.readonly'
 CLIENT_SECRET_FILE = 'client_secret.json'
 APPLICATION_NAME = 'Google Sheets API Python Quickstart'
+ROSTER = 'mainroster'
+ROOT_GROUP = 'ulab'
 
 def get_credentials():
     """Gets valid user credentials from storage.
@@ -552,20 +551,253 @@ def del_person_from_ulab(SID):
         body = {'requests': requests}
         response = service.spreadsheets().batchUpdate(spreadsheetId=spreadsheet_Id, body=body).execute()
 
-    # Returns the Group object corresponding to the given group name. If there 
-    # is no group of this name, returns None. This function is used in the Group class as well.
-    # Needs to create a Group instance according to the constructor defined in the Group class and return that instance. 
-    # The parent field of Group is another Group and the subgroups field is a list of subgroup names. 
-    # So, to get the Group <group_name> you would also need to get the parent group. 
-    # (Just call get_group on the parent group name for this.) 
-    def get_group(group_name):
+# Returns the Group object corresponding to the given group name. If there 
+# is no group of this name, returns None. This function is used in the Group class as well.
+# Needs to create a Group instance according to the constructor defined in the Group class and return that instance. 
+# The parent field of Group is another Group and the subgroups field is a list of subgroup names. 
+# So, to get the Group <group_name> you would also need to get the parent group. 
+# (Just call get_group on the parent group name for this.) 
+def get_group(group_name):
+    group_sheet = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=group_name).execute()
+    values = group_sheet.get('values', [])
+    if not values:
+        return None
+    SID_index = values[0].index('SID')
+    role_index = values[0].index('Role')
+    subgroup_index = values[0].index("Subgroups")
+    parent_index = values[0].index("Parent")
+    parent_name = values[1][parent_index]
+    persons = {}
+    subgroups = set()
+    for row in range(1, len(values)):
+        sid = int(values[row][SID_index])
+        role = values[row][role_index]
+        subgroup = str(values[row][subgroup_index])
+        if subgroup:
+            subgroups.add(subgroup)
+        if sid:
+            persons[sid] = role
+    if group_name == ROOT_GROUP:
+        group = Group(group_name, persons, subgroups, True)
+    else:
+        group = Group(group_name, persons, subgroups, True, get_group(parent_name))
+    return group
+
+
+# Returns the Person object corresponding to the given SID. If there is no person with this SID, returns None.
+# Needs access to the spreadsheets. Needs to create a Person instance according to the constructor defined in the Person class.
+# For now just create the Person instance with basic field information (name, sid, email, etc.). We can add other fields later.
+def get_person(SID):
+    mainroster = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=ROSTER).execute()
+    values = mainroster.get('values', [])
+    if not values:
+        return None
+    field_indices = {}
+    group_index = group_start_index()
+    # Get the index of each field in the sheet, such as SID, First Name, etc.
+    for i in range(group_index):
+        field_indices[values[0][i]] = i
+
+    person_fields = {}
+    for row_index in range(1, len(values)):
+        if str(SID) == values[row_index][field_indices[Person.SID]]:
+            # To accommodate all the necessary fields, make a list of fields instead in the Person class.
+            person_fields[Person.SID] = values[row_index][field_indices[Person.SID]]
+            person_fields[Person.USERNAME] = values[row_index][field_indices[Person.USERNAME]]
+            person_fields[Person.LAST_NAME] = values[row_index][field_indices[Person.LAST_NAME]]
+            person_fields[Person.FIRST_NAME] = values[row_index][field_indices[Person.FIRST_NAME]]
+            person_fields[Person.SUPERVISOR] = values[row_index][field_indices[Person.SUPERVISOR]]
+            person_fields[Person.EMAIL] = values[row_index][field_indices[Person.EMAIL]]
+            person_fields[Person.PHONE_NUMBER] = values[row_index][field_indices[Person.PHONE_NUMBER]]
+            groups = set()
+            groupIndexStart =  group_start_index()
+            for group_index in range(groupIndexStart, len(values[SIDrow])):
+                cell = values[row_index][group_index]
+                if cell == 'y':
+                    groups.add(values[0][group_index])
+            return Person(person_fields, True, groups)
+    return None
+
+
+"""
+During tree traversals of the group structure, Group objects will not be
+created until needed. The subgroups field of Groups will store string names
+of subgroups and when the actual Group object is needed, we call get_group on
+that string name.
+
+After making modifications to a group, use the save() function to commit the changes
+to the spreadsheet.
+"""
+
+class Group:
+
+    def __init__(self, name='', subgroups=set(), exists=False, parent=None):
+        self.name = name
+        self.subgroups = subgroups
+        # Stored as a dictionary of SIDs to roles, as Person objects here
+        # will take up a considerable amount of space. This dictionary
+        # should only be populated at leaf node groups.
+        self.people = {}
+        self.exists = exists
+        self.parent = parent
+        self.googlegroup = 'example@googlegroups.com'
+    def __init__(self, name='', people = {}, subgroups=set(), exists=False, parent=None):
+        self.name = name
+        self.subgroups = subgroups
+        # Stored as a dictionary of SIDs to roles, as Person objects here
+        # will take up a considerable amount of space. This dictionary
+        # should only be populated at leaf node groups.
+        self.people = people
+        self.exists = exists
+        self.parent = parent
+        self.googlegroup = 'example@googlegroups.com'
+
+    # Returns whether this group is a leaf or not. The group is a leaf only if there are no subgroups.
+    def isLeaf(self):
+        return not bool(subgroups)
+
+    # Takes in a string name of the subgroup we are adding as a child of this group.
+    def add_subgroup(self, subgroup):
+        if type(subgroup) == str:
+            self.subgroups.add(subgroup)
+
+    # Adds a person to the group if they are not already in it. People can only be added to groups
+    # that are leaves in the ULAB organization. Traverse the path back to the root and add the person 
+    # to each ancestor group's respective column on mainroster. Returns true if the person is added successfully. 
+    def add_person_to_group(self, person, role):
+        if not person or not isinstance(person, Person):
+            print("Please provide a proper person.")
+            return False
+        if not self.isLeaf():
+            print("Please specify a more specific subgroup to add this person to.")
+            return False
+
+        if person.SID in self.people:
+            print("This person already exists in the group.")
+            return True
+        else :
+            self.people[person.SID] = role
+            group = self
+            while group.parent != None:
+                if group.name not in person.groups:
+                    person.groups.add(group.name)
+                group = group.parent
+            return True
+
+    # Removes a person from this group if they are in the group. If this group is a leaf, the person is only removed from this leaf group.
+    # If this group is an internal node, we remove the person from all the subgroups as well. Returns true if the remove is successful and
+    # returns false otherwise.
+    def remove_person_from_group(self, person):
+        if not person or not isinstance(person, Person):
+            print("Please provide a proper person.")
+            return False
+
+        if self.isLeaf():
+            if person.SID not in self.people:
+                print("This person does not exist in the group.")
+                return True
+            else
+                del self.people[person.SID]
+        else:
+            # Remove this group from the set of group names for the person.
+            person.groups.remove(self.name)
+            # Recursively remove the person from subgroups. 
+            for subgroup_name in self.subgroups:
+                subgroup = Group.get_group(subgroup_name)
+                if subgroup and isinstance(subgroup, Group):
+                    subgroup.remove_person_from_group(person)
+
+    def remove_group(self):
+        pass
+    def save_group(self):
         pass
 
-    # Returns the Person object corresponding to the given SID. If there is no person with this SID, returns None.
-    # Needs access to the spreadsheets. Needs to create a Person instance according to the constructor defined in the Person class.
-    # For now just create the Person instance with basic field information (name, sid, email, etc.). We can add other fields later.
-    def get_person(SID):
+"""
+After making modifications to a person, use the save() function to commit the changes
+to the spreadsheet.
+"""
+
+class Person:
+
+
+    # Define fields for the Person type here. 
+    SID  = 'SID'
+    FIRST_NAME = 'First Name'
+    MIDDLE_NAME = 'middle_name'
+    LAST_NAME = 'Last Name'
+    USERNAME = 'CalNet'
+    SUPERVISOR = 'supervisor'
+    EMAIL = 'Email'
+    PHONE_NUMBER = 'Phone Number'
+    MAJORS = 'majors'
+    BACK_ID = 'back_id'
+    DIETARY_PREFERENCES = 'dietary_preferences'
+    EXPECTED_GRADUATION = 'expected_graduation'
+    CLASSES = 'classes'
+    GOALS = 'goals'
+    ACCOUNTS = 'accounts'
+    ACCESSES = 'accesses'
+
+    def __init__(self, person_fields={}, exists=False, groups=set()):
+        self.SID = person_fields[Person.SID]
+        self.first_name = person_fields[Person.FIRST_NAME]
+        self.middle_name = person_fields[Person.MIDDLE_NAME]
+        self.last_name = person_fields[Person.LAST_NAME]
+        self.username = person_fields[Person.USERNAME]
+        self.supervisor = person_fields[Person.SUPERVISOR]
+        self.email = person_fields[Person.EMAIL]
+        self.phone = person_fields[Person.PHONE_NUMBER]
+        self.majors = person_fields[Person.MAJORS]
+        self.back_id = person_fields[Person.BACK_ID]
+        self.dietary_preferences = person_fields[Person.DIETARY_PREFERENCES]
+        self.expected_graduation = person_fields[Person.EXPECTED_GRADUATION]
+        self.classes = person_fields[Person.CLASSES]
+        self.goals = person_fields[Person.GOALS]
+        self.accounts = person_fields[Person.ACCOUNTS]
+        self.accesses = person_fields[Person.ACCESSES]
+        # Stores the string names of the groups that this person is a part of. Using the get_group() in employee-management.py
+        # to retrieve the Group object for this group. Since order does not matter, we will use a set.
+        self.groups = groups
+
+    # Adds the string name of a group to this person.
+    def add_group(self, group) :
+        self.groups.append(group)
+
+    def addRole(Role) :
+        self.Roles.append(Role)
+
+    def deleteRole(Role) :
+        self.Roles.remove(Role)
+
+    def adjustFirstName(Name) :
+        self.FirstName = Name
+
+    def adjustLastName(Name) :
+        self.LastName = Name
+
+    def adjustMiddleName(Name) :
+        self.MiddleName = Name
+
+    def adjustSID(newSID) :
+        self.SID = newSID
+
+    def adjustEmail(newEmail):
+        self.Email = newEmail
+
+    def adjustPhoneNumber(newPhoneNumber):
+        self.PhoneNumber = newPhoneNumber
+
+    def dietaryPreferences(DietaryPreferences):
+        self.DietaryPreferences = DietaryPreferences
+
+    def linkSchedule(schedule):
+        self.schedule = schedule
+
+    def remove_person(self):
         pass
+    def save_person(self):
+        pass
+
 
 
 if __name__ == '__main__':
