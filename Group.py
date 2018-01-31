@@ -30,8 +30,8 @@ class Group:
             self.subgroups.append(subgroup)
 
     # Adds a person to the group if they are not already in it. People can only be added to groups
-    # that are leaves in the ULAB organization. Traverse the path back to the root and add the person 
-    # to the group's respective column on mainroster. 
+    # that are leaves in the ULAB organization. Traverse the path back to the root and add the person
+    # to the group's respective column on mainroster.
     def add_person_to_group(self, person, role):
         if not person or not isinstance(person, Person):
             print("Please provide a proper person.")
@@ -67,5 +67,7 @@ class Group:
             for subgroup_name in self.subgroups:
                 subgroup = Group.get_group(subgroup_name)
                 if isinstance(subgroup, Group):
-
-    def 
+                    if group.name in person.groups :
+                        person.groups.remove(group.name)
+                    
+    def
