@@ -7,11 +7,11 @@ from oauth2client import client
 from oauth2client import tools
 from oauth2client.file import Storage
 
-# try:
-#     import argparse
-#     flags = argparse.ArgumentParser(parents=[tools.argparser]).parse_args()
-# except ImportError:
-#     flags = None
+try:
+    import argparse
+    flags = argparse.ArgumentParser(parents=[tools.argparser]).parse_args()
+except ImportError:
+    flags = None
 
 # If modifying these scopes, delete your previously saved credentials
 # at ~/.credentials/sheets.googleapis.com-python-quickstart.json
@@ -214,6 +214,7 @@ def create_group(title, parent='ulab'):
 def total_num_groups() :
     return len(get_all_groups())
 
+# Returns a list of the names of all the current groups in ULAB.
 def get_all_groups() :
     groups = []
     mainroster = sheets[0].get("properties", {}).get("title", "Sheet1") # Assumes mainroster is 1st sheet
@@ -237,8 +238,8 @@ def group_start_index() :
                 break
     except :
         pass # Ignores Sheets
-
     return group_index
+
 def remove_group(title):
     if title == 'ulab' or title == 'mainroster':
         return # Revise in future renditions (i.e. do not pass 'ulab' into fxn)
@@ -602,6 +603,7 @@ def get_person(SID):
     for row_index in range(1, len(values)):
         if str(SID) == values[row_index][field_indices[Person.SID]]:
             # To accommodate all the necessary fields, make a list of fields instead in the Person class.
+            # Replace with dictionary.get() calls with specified default values.
             person_fields[Person.SID] = values[row_index][field_indices[Person.SID]]
             person_fields[Person.USERNAME] = values[row_index][field_indices[Person.USERNAME]]
             person_fields[Person.LAST_NAME] = values[row_index][field_indices[Person.LAST_NAME]]
@@ -611,7 +613,7 @@ def get_person(SID):
             person_fields[Person.PHONE_NUMBER] = values[row_index][field_indices[Person.PHONE_NUMBER]]
             groups = set()
             groupIndexStart =  group_start_index()
-            for group_index in range(groupIndexStart, len(values[SIDrow])):
+            for group_index in range(groupIndexStart, len(values[row_index])):
                 cell = values[row_index][group_index]
                 if cell == 'y':
                     groups.add(values[0][group_index])
@@ -696,7 +698,7 @@ class Group:
             if person.SID not in self.people:
                 print("This person does not exist in the group.")
                 return True
-            else
+            else:
                 del self.people[person.SID]
         else:
             # Remove this group from the set of group names for the person.
@@ -709,9 +711,12 @@ class Group:
 
     def remove_group(self):
         pass
+    # This function will be called to save changes made to a group. It is essentially a commit
+    # after the user does a series of transactions on the Group object.
     def save_group(self):
         pass
 
+        
 """
 After making modifications to a person, use the save() function to commit the changes
 to the spreadsheet.
