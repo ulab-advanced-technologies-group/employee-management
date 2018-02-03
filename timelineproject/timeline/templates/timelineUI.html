@@ -12,10 +12,10 @@
     <title>Sign-in Template</title>
 
     <!-- Bootstrap core CSS -->
-    <link href="bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="static/bootstrap.min.css">
 
     <!-- Custom styles for this template -->
-    <link href="signin.css" rel="stylesheet">
+    <link rel="stylesheet" href="static/signin.css">
 
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
@@ -32,17 +32,11 @@
   </head>
 
   <body class="text-center">
-    <form class="form-signin">
-      <img class="mb-4" src="logo2.png" alt="Ulab Icon" width="175" height="72">
+    <form class="form-signin" action="{{ url_for('events') }}" method="POST">
+      <img class="mb-4" src="static/logo2.png" alt="Ulab Icon" width="175" height="72">
       <h1 class="h3 mb-3 font-weight-normal text-white">Timeline Tool</h1>
-      <form method="POST" action="/events">
-        <!-- <label for="inputSID" class="sr-only trombley">SID</label> -->
-        <!-- <input type="text" name="inputSID" class="form-control" placeholder="SID" required autofocus/> -->
-        <!-- </div> -->
-        <!-- <button class="btn btn-lg btn-primary btn-block btn-trevor" type="submit">Submit</button> -->
-        <input type="number" name="inputSID"/>
-        <input type="submit" name="Submit"/>
-      </form>
+      <input type="number" name="inputSID"/>
+      <input type="submit" value="Submit"/>
     </form>
     <div class="footer">
       <p>&copy; 2018-2019</p>

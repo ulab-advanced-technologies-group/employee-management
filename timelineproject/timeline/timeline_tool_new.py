@@ -1,7 +1,5 @@
-import sys
-
-from timeline.GoogleCalendarCopy import quickstartCal
-from timeline.GoogleSheetsCopy import employee_management
+from GoogleCalendarCopy import quickstartCal
+from GoogleSheetsCopy import employee_management
 
 def get_groups(SID):
   	return employee_management.groups(SID)
@@ -28,19 +26,19 @@ def get_events(my_groups):
     timeline = dict()
     print('------These are your events------')
     for i in range(len(sortedevents)):
-        timeline['Event ' + (i+1)] = dict()
+        timeline['Event ' + str(i+1)] = dict()
         allday = False
         if sortedevents[i]['start'].get('dateTime') is None:
             allday = True
 
-        timeline['Event ' + (i+1)]['summary'] = sortedevents[i]["summary"]
+        timeline['Event ' + str(i+1)]['summary'] = sortedevents[i]["summary"]
         print(sortedevents[i]["summary"])
 
         try:
             if allday:
                 start = sortedevents[i]['start'].get('date')
                 end = sortedevents[i]['end'].get('date')
-                timeline['Event ' + (i+1)]['date_time'] = 'Date & Time:' + start[0:10] + '-' + end[0:9] + str(int(end[9]) - 1)
+                timeline['Event ' + str(i+1)]['date_time'] = 'Date & Time:' + start[0:10] + '-' + end[0:9] + str(int(end[9]) - 1)
                 print('Date & Time:', start[0:10], '-', end[0:9] + str(int(end[9]) - 1))
             else:
                 start = sortedevents[i]['start'].get('dateTime', sortedevents[i]['start'].get('date'))
@@ -70,31 +68,34 @@ def get_events(my_groups):
                 else:
                     end = end[0:16] + ' AM'
 
-                timeline['Event ' + (i+1)]['date_time'] = 'Date & Time:' + start[0:10] + start[11:20] + '-' + end[0:10] + end[11:20]
+                if start[0:10] == end[0:10]: # if dates are the same
+                    timeline['Event ' + str(i+1)]['date_time'] = 'Date & Time: ' + start[0:10] + ', ' + start[11:20] + ' - ' + end[11:20]
+                else: # if dates are different
+                    timeline['Event ' + str(i+1)]['date_time'] = 'Date & Time: ' + start[0:10] + ', ' + start[11:20] + ' - ' + end[0:10] + end[11:20]
                 print('Date & Time:', start[0:10], start[11:20], '-', end[0:10], end[11:20])
         except KeyError:
-            timeline['Event ' + (i+1)]['date_time'] = 'N/A'
+            timeline['Event ' + str(i+1)]['date_time'] = 'Date & Time: ' + 'N/A'
             pass
 
         try:
-            timeline['Event ' + (i+1)]['location'] = 'Location:' + sortedevents[i]['location']
+            timeline['Event ' + str(i+1)]['location'] = 'Location: ' + sortedevents[i]['location']
             print('Location:', sortedevents[i]['location'])
         except KeyError:
-            timeline['Event ' + (i+1)]['location'] = 'N/A'
+            timeline['Event ' + str(i+1)]['location'] = 'Location: ' + 'N/A'
             pass
 
         try:
-            timeline['Event ' + (i+1)]['description'] = 'Description:' + sortedevents[i]["description"]
+            timeline['Event ' + str(i+1)]['description'] = 'Description: ' + sortedevents[i]["description"]
             print('Description:', sortedevents[i]["description"])
         except KeyError:
-            timeline['Event ' + (i+1)]['description'] = 'N/A'
+            timeline['Event ' + str(i+1)]['description'] = 'Description: ' + 'N/A'
             pass
 
         try:
-            timeline['Event ' + (i+1)]['link'] = 'Hangout Link:' + sortedevents[i]['hangoutLink']
+            timeline['Event ' + str(i+1)]['link'] = 'Hangout Link: ' + sortedevents[i]['hangoutLink']
             print('Hangout Link:', sortedevents[i]['hangoutLink'])
         except KeyError:
-            timeline['Event ' + (i+1)]['description'] = 'N/A'
+            timeline['Event ' + str(i+1)]['link'] = 'Hangout Link: ' + 'N/A'
             pass
 
         print()

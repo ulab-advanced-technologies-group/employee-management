@@ -12,10 +12,10 @@
     <title>Your Upcoming Events</title>
 
     <!-- Bootstrap core CSS -->
-    <link href="bootstrap.min.css" rel="stylesheet">
+    <link href="static/bootstrap.min.css" rel="stylesheet">
 
     <!-- Custom styles for this template -->
-    <link href="signin.css" rel="stylesheet">
+    <link href="static/signin.css" rel="stylesheet">
 
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
@@ -32,8 +32,8 @@
   </head>
 
   {% block body %}
-  <section class="align-middle" style="font-size:2em; margin:0 2em">
-    <img class="align-middle" src="logo2.png" alt="Ulab Icon" width="175" height="72">
+  <section class="align-middle" style="font-size:em; margin:0 2em">
+    <img class="align-middle" src="static/logo2.png" alt="Ulab Icon" width="175" height="72">
     <h1 style="text-align: center">Your Upcoming Events</h1>
 
     <div class="container">
@@ -41,15 +41,15 @@
         <div class="col-sm-12 text-center">
           {% for event in timeline.keys() %}
           <li>
-            <div class="tab-content col-md-10 col-md-offset-1">
-              <h2>{{ event }} </h2>
+            <div>
+              <h2 class="font-weight-normal text-white" style="font-size:40px"> {{ event }} </h2>
               <div class="list-group">
                 <div style="padding: 1em 1em; text-align: left">
-                  <p style="font-size:16px">{{ timeline[event]['summary'] }}</p>
-                  <p style="font-size:16px">{{ timeline[event]['date_time'] }}</p>
-                  <p style="font-size:16px">{{ timeline[event]['location'] }}</p>
-                  <p style="font-size:16px">{{ timeline[event]['description'] }}</p>
-                  <p style="font-size:16px">{{ timeline[event]['link'] }}</p>
+                  <p style="font-size:24px; color:white; text-align:center">{{ timeline[event]['summary'] }}</p>
+                  <p style="font-size:16px; color:white">{{ timeline[event]['date_time'] }}</p>
+                  <p style="font-size:16px; color:white">{{ timeline[event]['location'] }}</p>
+                  <p style="font-size:16px; color:white">{{ timeline[event]['description'] }}</p>
+                  <p style="font-size:16px; color:white">{{ timeline[event]['link'] }}</p>
                 </div>
               </div>
             </div>
