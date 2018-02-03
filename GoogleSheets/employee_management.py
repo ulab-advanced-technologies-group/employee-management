@@ -508,9 +508,13 @@ def get_person(SID):
                 field = values[row_index][i]
                 # Remove leading and trailing whitespace.
                 stripped_field = field.strip()
+                list_fields = set([Person.CLASSES, Person.MAJORS, Person.ACCESSES, Person.ACCOUNTS])
                 field_name = Person.FIELDS[i]
                 if stripped_field:
-                    person_fields[field_name] = stripped_field
+                    if field_name in list_fields:
+                        person_fields[field_name] = stripped_field.split(",")
+                    else:
+                        person_fields[field_name] = stripped_field
             groups = set()
             groupIndexStart =  group_start_index()
             for group_index in range(groupIndexStart, len(values[row_index])):
@@ -555,7 +559,7 @@ def batch_get_persons(SIDs):
 """
 During tree traversals of the group structure, Group objects will not be
 created until needed. The subgroups field of Groups will store string names
-of subgroups and when the actual Group object is needed, we call get_group on
+of subgroups and when thbe actual Group object is needed, we call get_group on
 that string name.
 
 After making modifications to a group, use the save() function to commit the changes
