@@ -7,6 +7,8 @@ from oauth2client import client
 from oauth2client import tools
 from oauth2client.file import Storage
 
+from Drive import Drive
+
 try:
     import argparse
     flags = argparse.ArgumentParser(parents=[tools.argparser]).parse_args()
@@ -112,7 +114,7 @@ def num_to_letter(n):
 
 # Creates a new group with the provided group name if it does not already exist.
 # Attaches the group to the provided parent. Creates a group with the name of the
-# parent concatenated with the subgroup's name with a dash. To create 
+# parent concatenated with the subgroup's name with a dash. To create
 # ulab-physics-astro, pass in astro with the parent as ulab-physics.
 def create_group(group_name, parent_name='ulab'):
     parent = get_group(parent_name)
@@ -449,12 +451,12 @@ def del_person_from_ulab(SID):
     #     body = {'requests': requests}
     #     response = service.spreadsheets().batchUpdate(spreadsheetId=spreadsheet_Id, body=body).execute()
 
-# Returns the Group object corresponding to the given group name. If there 
+# Returns the Group object corresponding to the given group name. If there
 # is no group of this name, returns None. This function is used in the Group class as well.
-# Needs to create a Group instance according to the constructor defined in the Group class and return that instance. 
-# The parent field of Group is another Group and the subgroups field is a list of subgroup names. 
-# So, to get the Group <group_name> you would also need to get the parent group. 
-# (Just call get_group on the parent group name for this.) 
+# Needs to create a Group instance according to the constructor defined in the Group class and return that instance.
+# The parent field of Group is another Group and the subgroups field is a list of subgroup names.
+# So, to get the Group <group_name> you would also need to get the parent group.
+# (Just call get_group on the parent group name for this.)
 def get_group(group_name, parent=None):
     group_sheet = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=group_name).execute()
     values = group_sheet.get('values', [])
@@ -501,7 +503,7 @@ def get_person(SID):
         if str(SID) == values[row_index][0]:
             # To accommodate all the necessary fields, make a list of fields instead in the Person class.
             # Replace with dictionary.get() calls with specified default values. Assumes that the order of the fields
-            # in Person.FIELDS matches the order of the columns 
+            # in Person.FIELDS matches the order of the columns
             for i in range(len(Person.FIELDS)):
                 field = values[row_index][i]
                 # Remove leading and trailing whitespace.
@@ -536,7 +538,7 @@ def batch_get_persons(SIDs):
             if str(SID) == values[row_index][0]:
                 # To accommodate all the necessary fields, make a list of fields instead in the Person class.
                 # Replace with dictionary.get() calls with specified default values. Assumes that the order of the fields
-                # in Person.FIELDS matches the order of the columns 
+                # in Person.FIELDS matches the order of the columns
                 for i in range(len(Person.FIELDS)):
                     field = values[row_index][i]
                     # Remove leading and trailing whitespace.
@@ -601,8 +603,8 @@ class Group:
 
 
     # Adds a person to the group if they are not already in it. People can only be added to groups
-    # that are leaves in the ULAB organization. Traverse the path back to the root and add the person 
-    # to each ancestor group's respective column on mainroster. Returns true if the person is added successfully. 
+    # that are leaves in the ULAB organization. Traverse the path back to the root and add the person
+    # to each ancestor group's respective column on mainroster. Returns true if the person is added successfully.
     # Needs to call save person after this function call to commit the person to their groups.
     def add_person_to_group(self, person, role):
         if not person or not isinstance(person, Person):
@@ -644,7 +646,7 @@ class Group:
         else:
             # Remove this group from the set of group names for the person.
             person.groups.remove(self.name)
-            # Recursively remove the person from subgroups. 
+            # Recursively remove the person from subgroups.
             for subgroup_name in self.subgroups:
                 subgroup = Group.get_group(subgroup_name)
                 if subgroup and isinstance(subgroup, Group):
@@ -782,7 +784,7 @@ to the spreadsheet.
 """
 
 class Person:
-    # Define fields for the Person type here. 
+    # Define fields for the Person type here.
     SID  = 'SID'
     FIRST_NAME = 'first_name'
     MIDDLE_NAME = 'middle_name'
@@ -907,7 +909,7 @@ class Person:
             else:
                 values.append(field)
         return values
-        
+
     def save_person(self):
         mainroster = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=ROSTER).execute()
         values = mainroster.get('values', [])
@@ -925,7 +927,7 @@ class Person:
                 default_values.append('n')
         row_number = 0
         if not self.exists:
-            row_number = num_rows + 1            
+            row_number = num_rows + 1
         else:
             for row_index in range(1, len(values)):
                 if str(self.person_fields[Person.SID]) == values[row_index][0]:
