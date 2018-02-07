@@ -89,6 +89,7 @@ def create_new_directory(name, subgroups={}, parentId='1sv8_MI_b-JUdX0_ci6tj-RiF
 
 def delete_directory(name):
     group_id = get_group_id(name)
+    del_group = service.files().delete(fileId=group_id).execute()
     return
 
 

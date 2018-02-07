@@ -73,7 +73,7 @@ def get_sheets(service):
 
 spreadsheet_Id = '1k5OgXFL_o99gbgqD_MJt6LuggL4KRGBI27SIW45-FgQ'
 service = main()
-sheets = get_sheets(service)
+
 
 # Returns a list of the names of the groups that belong to the person with this SID.
 def group_names(SID):
@@ -119,6 +119,8 @@ def num_to_letter(n):
 def create_group(group_name, parent_name='ulab'):
     parent = get_group(parent_name)
     name = parent_name + '-' + group_name
+    # print(name)
+    # print()
     new_group = get_group(name)
     if new_group:
         print("A group with this name already exists.")
@@ -131,7 +133,7 @@ def create_group(group_name, parent_name='ulab'):
     # Parent got a new subgroup, so we need to save this as well.
     parent.save_group()
 
-    Drive.create_new_directory(name, {}, Drive.get_group_id(parent_name))
+    # Drive.create_new_directory(name, {}, Drive.get_group_id(parent_name))
 
     return True
 
@@ -174,14 +176,15 @@ def remove_group(title):
         if not group:
             print("Please provide a valid group.")
             return False
-        parent = group.parent
         group.remove_group()
+        parent = group.parent
         # Commit the changes made to the parent group.
         parent.save_group()
         return True
 
 # Returns the sheet id for the given sheet title. Returns -1 if no sheet title matches.
 def get_sheetid(sheet_title):
+    sheets = get_sheets(service)
     for sheet in sheets:
         title = sheet.get("properties", {}).get("title", "Sheet1")
         if title == sheet_title:
@@ -759,9 +762,20 @@ class Group:
             }
             new_group_column_response = service.spreadsheets().values().batchUpdate(spreadsheetId=spreadsheet_Id, body=new_group_column_body).execute()
 
+            addemptycolumnreq = [{
+                "appendDimension": {
+                    "sheetId": get_sheetid(ROSTER),
+                    "dimension": "COLUMNS",
+                    "length": 1
+                    }
+                }
+            ]
+            append_empty_body = {"requests": addemptycolumnreq}
+            append_empty_column_response = service.spreadsheets().batchUpdate(spreadsheetId=spreadsheet_Id, body=append_empty_body).execute()
+
         SID_column = ['SID']
         role_column = ['Role']
-        subgroup_column = ['Subgroups'] + list(self.subgroups)
+        subgroup_column = ['Subgroups'] + list(self.subgroups) + [''] # [''] for cases where we delete a subgroup
         parent = ['Parent', self.parent.name if self.parent else '']
         for SID in self.people:
             SID_column.append(SID)
