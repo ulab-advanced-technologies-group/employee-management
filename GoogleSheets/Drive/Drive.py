@@ -87,6 +87,11 @@ def create_new_directory(name, subgroups={}, parentId='1sv8_MI_b-JUdX0_ci6tj-RiF
         return
     print('Group already in directory')
 
+def delete_directory(name):
+    group_id = get_group_id(name)
+    return
+
+
 def get_group_id(group_name):
     query = """trashed=false and name='""" + group_name + """'"""
     results = service.files().list(pageSize=10, fields="nextPageToken, files(id, name)", q=query).execute()

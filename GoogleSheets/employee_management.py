@@ -118,18 +118,21 @@ def num_to_letter(n):
 # ulab-physics-astro, pass in astro with the parent as ulab-physics.
 def create_group(group_name, parent_name='ulab'):
     parent = get_group(parent_name)
-    new_group = get_group(group_name)
+    name = parent_name + '-' + group_name
+    new_group = get_group(name)
     if new_group:
         print("A group with this name already exists.")
         return False
     if not parent:
         print("Please specify a valid parent for this new group.")
         return False
-    name = parent_name + '-' + group_name
     new_group = Group(name=name, parent=parent)
     new_group.save_group()
     # Parent got a new subgroup, so we need to save this as well.
     parent.save_group()
+
+    Drive.create_new_directory(name, {}, Drive.get_group_id(parent_name))
+
     return True
 
 # Returns the total number of groups in the organization.
@@ -594,7 +597,7 @@ class Group:
         if subgroup in self.subgroups:
             self.subgroups.remove(subgroup)
 
-    # Returns a list of this group's subgroups as Group objects. 
+    # Returns a list of this group's subgroups as Group objects.
     def get_subgroups(self):
         if self.isLeaf():
             return []
@@ -650,7 +653,7 @@ class Group:
             person.groups.remove(self.name)
             # Recursively remove the person from subgroups.
             for subgroup_name in self.subgroups:
-                subgroup = Group.get_group(subgroup_name)
+                subgroup = get_group(subgroup_name)
                 if subgroup and isinstance(subgroup, Group):
                     subgroup.remove_person_from_group(person)
             return True
@@ -663,7 +666,7 @@ class Group:
         group_sheet = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=self.name).execute()
         values = group_sheet.get('values', [])
         for subgroup_name in self.subgroups:
-            subgroup = Group.get_group(subgroup_name)
+            subgroup = get_group(subgroup_name)
             if subgroup and isinstance(subgroup, Group):
                 subgroup.remove_group()
         self.parent.remove_subgroup(self.name)
