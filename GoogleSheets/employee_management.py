@@ -7,7 +7,7 @@ from oauth2client import client
 from oauth2client import tools
 from oauth2client.file import Storage
 
-from Drive import Drive
+from Drive import drive
 
 try:
     import argparse
@@ -133,7 +133,7 @@ def create_group(group_name, parent_name='ulab'):
     # Parent got a new subgroup, so we need to save this as well.
     parent.save_group()
 
-    # Drive.create_new_directory(name, {}, Drive.get_group_id(parent_name))
+    drive.create_new_directory(name, {}, drive.get_group_id(parent_name))
 
     return True
 
@@ -180,6 +180,9 @@ def remove_group(title):
         parent = group.parent
         # Commit the changes made to the parent group.
         parent.save_group()
+
+        drive.delete_directory(title)
+
         return True
 
 # Returns the sheet id for the given sheet title. Returns -1 if no sheet title matches.
