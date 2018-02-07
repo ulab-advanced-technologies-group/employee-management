@@ -7,7 +7,7 @@ from oauth2client import client
 from oauth2client import tools
 from oauth2client.file import Storage
 
-from Drive import drive
+from Drive import Drive
 
 try:
     import argparse
@@ -100,7 +100,7 @@ def person_from_group(group):
         for row_index in range(1, num_rows):
             if values[row_index][group_index] == 'y':
                 persons.append(values[row_index][SIDindex])
-    except:
+    except IndexError as e:
         pass
     return persons
 
@@ -119,8 +119,6 @@ def num_to_letter(n):
 def create_group(group_name, parent_name='ulab'):
     parent = get_group(parent_name)
     name = parent_name + '-' + group_name
-    # print(name)
-    # print()
     new_group = get_group(name)
     if new_group:
         print("A group with this name already exists.")
@@ -133,8 +131,7 @@ def create_group(group_name, parent_name='ulab'):
     # Parent got a new subgroup, so we need to save this as well.
     parent.save_group()
 
-    drive.create_new_directory(name, {}, drive.get_group_id(parent_name))
-
+    # drive.create_new_directory(name, {}, drive.get_group_id(parent_name))
     return True
 
 # Returns the total number of groups in the organization.
@@ -167,12 +164,12 @@ def group_start_index() :
     return group_index
 
 # Removes the group with the given title. Does not allow removal of the root group.
-def remove_group(title):
-    if title == ROOT_GROUP:
+def remove_group(group_name):
+    if group_name == ROOT_GROUP:
         print("The root group cannot be removed.")
         return False
     else:
-        group = get_group(title)
+        group = get_group(group_name)
         if not group:
             print("Please provide a valid group.")
             return False
@@ -181,7 +178,7 @@ def remove_group(title):
         # Commit the changes made to the parent group.
         parent.save_group()
 
-        drive.delete_directory(title)
+        # drive.delete_directory(title)
 
         return True
 
@@ -232,9 +229,9 @@ def add_person_to_group(SID, role, group):
     if not group:
         print("Please specify a proper group.")
         return False
-    if group.add_person_to_group(person, role):
-        person.save_person()
-        return True
+    group.add_person_to_group(person, role)
+    person.save_person()
+    return True
     # # Failure Cases
     # # 1. SID isn't in ulab
     # mainroster = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range='mainroster').execute()
@@ -332,9 +329,9 @@ def del_person_from_group(SID, group):
     if not group:
         print("Please specify a proper group.")
         return False
-    if group.remove_person_from_group(person):
-        person.save_person()
-        return True
+    group.remove_person_from_group(person)
+    person.save_person()
+    return True
 
     # result = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=group).execute()
     # values = result.get('values', [])
@@ -579,13 +576,13 @@ to the spreadsheet.
 
 class Group:
 
-    def __init__(self, name='', people={}, subgroups=set(), exists=False, parent=None):
+    def __init__(self, name, people={}, subgroups=set(), exists=False, parent=None):
         self.name = name
         self.subgroups = subgroups
         # Stored as a dictionary of SIDs to roles, as Person objects here
         # will take up a considerable amount of space. This dictionary
         # should only be populated at leaf node groups.
-        self.people = people
+        self.people = people.copy()
         self.exists = exists
         self.parent = parent
         self.googlegroup = 'example@googlegroups.com'
@@ -651,15 +648,17 @@ class Group:
                 print("This person does not exist in the group.")
                 return True
             else:
-                del self.people[person.person_fields[Person.SID]]
+                if self.name in person.groups:
+                    person.groups.remove(self.name)
+                self.people.pop(person.person_fields[Person.SID], None)
                 self.save_group()
                 return True
         else:
             # Remove this group from the set of group names for the person.
-            person.groups.remove(self.name)
+            if self.name in person.groups:
+                person.groups.remove(self.name)
             # Recursively remove the person from subgroups.
-            for subgroup_name in self.subgroups:
-                subgroup = get_group(subgroup_name)
+            for subgroup in self.get_subgroups():
                 if subgroup and isinstance(subgroup, Group):
                     subgroup.remove_person_from_group(person)
             return True
@@ -669,10 +668,12 @@ class Group:
         if self.name == ROOT_GROUP:
             print("Root group cannot be removed.")
             return
+        if get_sheetid(self.name) == -1:
+            print("Group has no corresponding sheet.")
+            return
         group_sheet = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=self.name).execute()
         values = group_sheet.get('values', [])
-        for subgroup_name in self.subgroups:
-            subgroup = get_group(subgroup_name)
+        for subgroup in self.get_subgroups():
             if subgroup and isinstance(subgroup, Group):
                 subgroup.remove_group()
         self.parent.remove_subgroup(self.name)
@@ -737,7 +738,6 @@ class Group:
                 add_group_template_response = service.spreadsheets().values().batchUpdate(spreadsheetId=spreadsheet_Id, body=new_group_body).execute()
             if self.parent:
                 self.parent.add_subgroup(self.name)
-                self.parent.save_group()
 
             # Add group to mainroster column.
             mainroster = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=ROSTER).execute()
@@ -778,11 +778,15 @@ class Group:
 
         SID_column = ['SID']
         role_column = ['Role']
-        subgroup_column = ['Subgroups'] + list(self.subgroups) + [''] # [''] for cases where we delete a subgroup
+        subgroup_column = ['Subgroups'] + list(self.subgroups)
         parent = ['Parent', self.parent.name if self.parent else '']
         for SID in self.people:
             SID_column.append(SID)
             role_column.append(self.people[SID])
+        # To account for cases where either we delete a subgroup, or delete a person from this group.
+        subgroup_column += ['']
+        SID_column += ['']
+        role_column += ['']
         longest_col = max([len(SID_column), len(role_column), len(subgroup_column), len(parent)])
         body = {
             'valueInputOption': "USER_ENTERED",
@@ -895,26 +899,23 @@ class Person:
 
         mainroster = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=ROSTER).execute()
         values = mainroster.get('values', [])
-        roworder = 0
+        roworder = 1
         requests = []
-        try:
-            SIDindex = 0
-            for row in values:
-                if str(SID) == row[SIDindex]:
-                    requests.append({
-                        'deleteDimension': {
-                            'range': {
-                                'sheetId': mainrosterid,
-                                'dimension': 'ROWS',
-                                'startIndex': roworder,
-                                'endIndex': roworder + 1,
-                            }
+        SIDindex = 0
+        for row_index in range(1, len(values)):
+            if str(self.person_fields[Person.SID]) == values[row_index][SIDindex]:
+                requests.append({
+                    'deleteDimension': {
+                        'range': {
+                            'sheetId': get_sheetid(ROSTER),
+                            'dimension': 'ROWS',
+                            'startIndex': roworder,
+                            'endIndex': roworder + 1,
                         }
                     }
-                )
-                roworder += 1
-        except:
-            pass # Ignores sheets that do not have SID as a column
+                }
+            )
+            roworder += 1
         if requests:
             delete_person_body = {'requests': requests}
             delete_person_response = service.spreadsheets().batchUpdate(spreadsheetId=spreadsheet_Id, body=delete_person_body).execute()
