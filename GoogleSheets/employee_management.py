@@ -458,6 +458,8 @@ def del_person_from_ulab(SID):
 # So, to get the Group <group_name> you would also need to get the parent group.
 # (Just call get_group on the parent group name for this.)
 def get_group(group_name, parent=None):
+    if get_sheetid(group_name) == -1:
+        return None
     group_sheet = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=group_name).execute()
     values = group_sheet.get('values', [])
     if not values:
@@ -658,9 +660,8 @@ class Group:
         if self.name == ROOT_GROUP:
             print("Root group cannot be removed.")
             return
-
-        group_sheet = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=title).execute()
-        values = result.get('values', [])
+        group_sheet = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=self.name).execute()
+        values = group_sheet.get('values', [])
         for subgroup_name in self.subgroups:
             subgroup = Group.get_group(subgroup_name)
             if subgroup and isinstance(subgroup, Group):
@@ -669,7 +670,7 @@ class Group:
         delsheetrequest = [
             {
             "deleteSheet": {
-                "sheetId": sheetId,
+                "sheetId": get_sheetid(self.name),
                 }
             }
         ]
@@ -679,7 +680,7 @@ class Group:
         delmaincolumnreq = [{
                 "deleteDimension": {
                     "range": {
-                      "sheetId": mainrosterid,
+                      "sheetId": get_sheetid(ROSTER),
                       "dimension": "COLUMNS",
                       "startIndex": column_index,
                       "endIndex":   column_index + 1
