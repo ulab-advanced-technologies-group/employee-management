@@ -7,7 +7,7 @@ from oauth2client import client
 from oauth2client import tools
 from oauth2client.file import Storage
 
-from Drive import Drive
+from Drive import drive
 
 try:
     import argparse
@@ -73,7 +73,7 @@ def get_sheets(service):
 
 spreadsheet_Id = '1k5OgXFL_o99gbgqD_MJt6LuggL4KRGBI27SIW45-FgQ'
 service = main()
-sheets = get_sheets(service)
+
 
 # Returns a list of the names of the groups that belong to the person with this SID.
 def group_names(SID):
@@ -118,18 +118,23 @@ def num_to_letter(n):
 # ulab-physics-astro, pass in astro with the parent as ulab-physics.
 def create_group(group_name, parent_name='ulab'):
     parent = get_group(parent_name)
-    new_group = get_group(group_name)
+    name = parent_name + '-' + group_name
+    # print(name)
+    # print()
+    new_group = get_group(name)
     if new_group:
         print("A group with this name already exists.")
         return False
     if not parent:
         print("Please specify a valid parent for this new group.")
         return False
-    name = parent_name + '-' + group_name
     new_group = Group(name=name, parent=parent)
     new_group.save_group()
     # Parent got a new subgroup, so we need to save this as well.
     parent.save_group()
+
+    drive.create_new_directory(name, {}, drive.get_group_id(parent_name))
+
     return True
 
 # Returns the total number of groups in the organization.
@@ -171,14 +176,18 @@ def remove_group(title):
         if not group:
             print("Please provide a valid group.")
             return False
-        parent = group.parent
         group.remove_group()
+        parent = group.parent
         # Commit the changes made to the parent group.
         parent.save_group()
+
+        drive.delete_directory(title)
+
         return True
 
 # Returns the sheet id for the given sheet title. Returns -1 if no sheet title matches.
 def get_sheetid(sheet_title):
+    sheets = get_sheets(service)
     for sheet in sheets:
         title = sheet.get("properties", {}).get("title", "Sheet1")
         if title == sheet_title:
@@ -187,19 +196,15 @@ def get_sheetid(sheet_title):
     return -1
 
 def check_fields(fields):
-    if len(fields.keys()) != len(Person.FIELDS):
-        return False
-    else:
-        required_fields = set([Person.SID, Person.FIRST_NAME, Person.LAST_NAME, Person.EMAIL, Person.SUPERVISOR])
-        index = 0
-        for field_name in fields:
-            if field_name != FIELDS[index]:
-                return False
-            elif field_name in required_fields and not fields[field_name]:
-                # Missing some required information.
-                return False
-            index += 1
-        return True
+    # if len(fields) != len(Person.FIELDS):
+    #     return False
+    # else:
+    required_fields = set([Person.SID, Person.FIRST_NAME, Person.LAST_NAME, Person.EMAIL, Person.SUPERVISOR, Person.USERNAME])
+    for field_name in fields:
+        if field_name in required_fields and not fields[field_name]:
+            # Missing some required information.
+            return False
+    return True
 
 # Call this function with fields being a dictionary with all of Person.FIELDS included as keys.
 def add_person_to_mainroster(fields):
@@ -462,6 +467,8 @@ def del_person_from_ulab(SID):
 # So, to get the Group <group_name> you would also need to get the parent group.
 # (Just call get_group on the parent group name for this.)
 def get_group(group_name, parent=None):
+    if get_sheetid(group_name) == -1:
+        return None
     group_sheet = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=group_name).execute()
     values = group_sheet.get('values', [])
     if not values:
@@ -475,7 +482,9 @@ def get_group(group_name, parent=None):
     for row in range(1, len(values)):
         sid = values[row][SID_index]
         role = values[row][role_index]
-        subgroup = str(values[row][subgroup_index])
+        subgroup = ""
+        if len(values[row]) > 2:
+            subgroup = str(values[row][subgroup_index])
         if subgroup:
             subgroups.add(subgroup)
         if sid:
@@ -594,6 +603,16 @@ class Group:
         if subgroup in self.subgroups:
             self.subgroups.remove(subgroup)
 
+    # Returns a list of this group's subgroups as Group objects.
+    def get_subgroups(self):
+        if self.isLeaf():
+            return []
+        subgroups = []
+        for group_name in self.subgroups:
+            subgroups.append(get_group(group_name, self))
+        return subgroups
+
+
     # Adds a person to the group if they are not already in it. People can only be added to groups
     # that are leaves in the ULAB organization. Traverse the path back to the root and add the person
     # to each ancestor group's respective column on mainroster. Returns true if the person is added successfully.
@@ -606,11 +625,11 @@ class Group:
             print("Please specify a more specific subgroup to add this person to.")
             return False
 
-        if person.SID in self.people:
+        if person.person_fields[Person.SID] in self.people:
             print("This person already exists in the group.")
             return True
-        else :
-            self.people[person.SID] = role
+        else:
+            self.people[person.person_fields[Person.SID]] = role
             group = self
             while group.parent != None:
                 if group.name not in person.groups:
@@ -628,11 +647,11 @@ class Group:
             return False
 
         if self.isLeaf():
-            if person.SID not in self.people:
+            if person.person_fields[Person.SID] not in self.people:
                 print("This person does not exist in the group.")
                 return True
             else:
-                del self.people[person.SID]
+                del self.people[person.person_fields[Person.SID]]
                 self.save_group()
                 return True
         else:
@@ -640,7 +659,7 @@ class Group:
             person.groups.remove(self.name)
             # Recursively remove the person from subgroups.
             for subgroup_name in self.subgroups:
-                subgroup = Group.get_group(subgroup_name)
+                subgroup = get_group(subgroup_name)
                 if subgroup and isinstance(subgroup, Group):
                     subgroup.remove_person_from_group(person)
             return True
@@ -650,18 +669,17 @@ class Group:
         if self.name == ROOT_GROUP:
             print("Root group cannot be removed.")
             return
-
-        group_sheet = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=title).execute()
-        values = result.get('values', [])
+        group_sheet = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=self.name).execute()
+        values = group_sheet.get('values', [])
         for subgroup_name in self.subgroups:
-            subgroup = Group.get_group(subgroup_name)
+            subgroup = get_group(subgroup_name)
             if subgroup and isinstance(subgroup, Group):
                 subgroup.remove_group()
         self.parent.remove_subgroup(self.name)
         delsheetrequest = [
             {
             "deleteSheet": {
-                "sheetId": sheetId,
+                "sheetId": get_sheetid(self.name),
                 }
             }
         ]
@@ -671,7 +689,7 @@ class Group:
         delmaincolumnreq = [{
                 "deleteDimension": {
                     "range": {
-                      "sheetId": mainrosterid,
+                      "sheetId": get_sheetid(ROSTER),
                       "dimension": "COLUMNS",
                       "startIndex": column_index,
                       "endIndex":   column_index + 1
@@ -747,9 +765,20 @@ class Group:
             }
             new_group_column_response = service.spreadsheets().values().batchUpdate(spreadsheetId=spreadsheet_Id, body=new_group_column_body).execute()
 
+            addemptycolumnreq = [{
+                "appendDimension": {
+                    "sheetId": get_sheetid(ROSTER),
+                    "dimension": "COLUMNS",
+                    "length": 1
+                    }
+                }
+            ]
+            append_empty_body = {"requests": addemptycolumnreq}
+            append_empty_column_response = service.spreadsheets().batchUpdate(spreadsheetId=spreadsheet_Id, body=append_empty_body).execute()
+
         SID_column = ['SID']
         role_column = ['Role']
-        subgroup_column = ['Subgroups'] + list(self.subgroups)
+        subgroup_column = ['Subgroups'] + list(self.subgroups) + [''] # [''] for cases where we delete a subgroup
         parent = ['Parent', self.parent.name if self.parent else '']
         for SID in self.people:
             SID_column.append(SID)
@@ -766,6 +795,9 @@ class Group:
             ]
         }
         overWriteGroup = service.spreadsheets().values().batchUpdate(spreadsheetId=spreadsheet_Id, body=body).execute()
+
+    def __repr__(self):
+        return " ".join([word.capitalize() for word in self.name.split("-")])
 
 """
 After making modifications to a person, use the save() function to commit the changes
@@ -801,25 +833,27 @@ class Person:
                             ACCOUNTS: 'Accounts', ACCESSES: 'Accesses'}
 
     def __init__(self, person_fields={}, exists=False, groups=set([ROOT_GROUP])):
-        self.SID = person_fields.get(Person.SID, "-1")
-        self.first_name = person_fields.get(Person.FIRST_NAME, '')
-        self.middle_name = person_fields.get(Person.MIDDLE_NAME, '')
-        self.last_name = person_fields.get(Person.LAST_NAME, '')
-        self.username = person_fields.get(Person.USERNAME, '')
-        self.supervisor = person_fields.get(Person.SUPERVISOR, "-1")
-        self.email = person_fields.get(Person.EMAIL, 'defaultemail@email.com')
-        self.phone = person_fields.get(Person.PHONE_NUMBER, 'XXX-XXX-XXXX')
-        self.majors = person_fields.get(Person.MAJORS, [])
-        self.back_id = person_fields.get(Person.BACK_ID, "-1")
-        self.dietary_preferences = person_fields.get(Person.DIETARY_PREFERENCES, 'No Dietary Preference')
-        self.expected_graduation = person_fields.get(Person.EXPECTED_GRADUATION, 'Default Graduation')
-        self.classes = person_fields.get(Person.CLASSES, [])
-        self.goals = person_fields.get(Person.GOALS, '')
-        self.accounts = person_fields.get(Person.ACCOUNTS, [])
-        self.accesses = person_fields.get(Person.ACCESSES, [])
+        self.person_fields = {}
+        self.person_fields[Person.SID] = person_fields.get(Person.SID, "-1")
+        self.person_fields[Person.FIRST_NAME] = person_fields.get(Person.FIRST_NAME, '')
+        self.person_fields[Person.MIDDLE_NAME] = person_fields.get(Person.MIDDLE_NAME, '')
+        self.person_fields[Person.LAST_NAME] = person_fields.get(Person.LAST_NAME, '')
+        self.person_fields[Person.USERNAME] = person_fields.get(Person.USERNAME, '')
+        self.person_fields[Person.SUPERVISOR] = person_fields.get(Person.SUPERVISOR, "-1")
+        self.person_fields[Person.EMAIL] = person_fields.get(Person.EMAIL, 'defaultemail@email.com')
+        self.person_fields[Person.PHONE_NUMBER] = person_fields.get(Person.PHONE_NUMBER, 'XXX-XXX-XXXX')
+        self.person_fields[Person.MAJORS] = person_fields.get(Person.MAJORS, [])
+        self.person_fields[Person.BACK_ID] = person_fields.get(Person.BACK_ID, "-1")
+        self.person_fields[Person.DIETARY_PREFERENCES] = person_fields.get(Person.DIETARY_PREFERENCES, 'No Dietary Preference')
+        self.person_fields[Person.EXPECTED_GRADUATION] = person_fields.get(Person.EXPECTED_GRADUATION, 'Default Graduation')
+        self.person_fields[Person.CLASSES] = person_fields.get(Person.CLASSES, [])
+        self.person_fields[Person.GOALS] = person_fields.get(Person.GOALS, '')
+        self.person_fields[Person.ACCOUNTS] = person_fields.get(Person.ACCOUNTS, [])
+        self.person_fields[Person.ACCESSES] = person_fields.get(Person.ACCESSES, [])
         # Stores the string names of the groups that this person is a part of. Using the get_group() in employee-management.py
         # to retrieve the Group object for this group. Since order does not matter, we will use a set.
         self.groups = groups
+        self.exists = exists
 
     # Adds the string name of a group to this person.
     def add_group(self, group) :
@@ -916,13 +950,12 @@ class Person:
         if not self.exists:
             row_number = num_rows + 1
         else:
-            SID_index = title_row.index('SID')
             for row_index in range(1, len(values)):
-                if str(self.SID) == values[row_index][SID_index]:
+                if str(self.person_fields[Person.SID]) == values[row_index][0]:
                     row_number = row_index + 1
                     break
 
-        rangeName = '!A' + str(row_number + 1) + ':' + letter + str(row_number + 1)
+        rangeName = '!A' + str(row_number) + ':' + letter + str(row_number)
         update_person_body = {
                 'valueInputOption': "USER_ENTERED",
                 "data": [
