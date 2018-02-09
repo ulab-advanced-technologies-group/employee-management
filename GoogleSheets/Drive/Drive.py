@@ -55,8 +55,10 @@ service = discovery.build('drive', 'v3', http=http)
 # We want to only create a new directory when adding a new group?
 # We want to test creating a directory for entirety of ULAB?
 
+parent_directory_id = '1eKHhSEiIAGJn3qEiItvyop6MulVsG-4L'
+
 # If true, group already in directory and subdirectories, false otherwise
-def check_group(name, parentId='1sv8_MI_b-JUdX0_ci6tj-RiF3dT3_ddB'):
+def check_group(name, parentId=parent_directory_id):
     query = """trashed=false and '""" + parentId + "'" + """ in parents"""
     files = service.files().list(fields="files(name, id)", q=query).execute()
     groups = files.get('files')
@@ -67,9 +69,9 @@ def check_group(name, parentId='1sv8_MI_b-JUdX0_ci6tj-RiF3dT3_ddB'):
             return True
     return False
 
-def create_new_directory(name, subgroups={}, parentId='1sv8_MI_b-JUdX0_ci6tj-RiF3dT3_ddB'):
+def create_new_directory(name, parentId=parent_directory_id):
     # Checks if group is subgroup in parent by one level
-    if not check_group(name):
+    if not check_group(name, parentId):
         newGroup_metadata = {
             'name': name,
             'mimeType': 'application/vnd.google-apps.folder',
@@ -83,7 +85,7 @@ def create_new_directory(name, subgroups={}, parentId='1sv8_MI_b-JUdX0_ci6tj-RiF
         #         create_new_directory(subgroup, {}, newGroupId)
 
         ### adds edit privileges to file/folder
-        add_permissions('khang.nguyencampbell@gmail.com', newGroupId)
+        #add_permissions('khang.nguyencampbell@gmail.com', newGroupId)
         return
     print('Group already in directory')
 
@@ -110,14 +112,15 @@ def get_permission_id(email_address, group_name):
         if perm['emailAddress'] == email_address:
             return perm['id']
 
-def add_permissions(email_address, newGroupId):
+def add_permissions(email_address, group_name):
+    group_id = get_group_id(group_name)
     permissions = {
         'role': 'writer',
         'type': 'user',
         'emailAddress': email_address
     }
 
-    add_pm = service.permissions().create(fileId=newGroupId,
+    add_pm = service.permissions().create(fileId=group_id,
                 body=permissions, sendNotificationEmail=False).execute()
 
 def remove_permissions(email_address, group_name):

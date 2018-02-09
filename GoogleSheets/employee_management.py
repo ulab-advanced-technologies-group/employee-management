@@ -7,7 +7,7 @@ from oauth2client import client
 from oauth2client import tools
 from oauth2client.file import Storage
 
-from Drive import Drive
+from Drive import drive
 
 try:
     import argparse
@@ -133,6 +133,35 @@ def create_group(group_name, parent_name='ulab'):
 
     # drive.create_new_directory(name, {}, drive.get_group_id(parent_name))
     return True
+
+######### For Demo purposes
+
+def create_folder_structure(group):
+    if group.parent == None:
+        drive.create_new_directory(group.name)
+    else:
+        drive.create_new_directory(group.name, drive.get_group_id(group.parent.name))
+    if group.subgroups != set():
+        for subgroup in group.subgroups:
+            create_folder_structure(get_group(subgroup))
+    else:
+        folders = {'Test Folder 1', 'Test Folder 2', 'Test Folder 3'}
+        for folder in folders:
+            drive.create_new_directory(folder, drive.get_group_id(group.name))
+    return True
+
+#########
+
+def get_email_from_SID(SID):
+    mainroster = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=ROSTER).execute()
+    values = mainroster.get('values', [])
+    SID_index = values[0].index('SID')
+    email_index = values[0].index('email')
+
+    for row_index in range(1, len(values)):
+        if str(SID) == values[row_index][SID_index]:
+            return values[row_index][email_index]
+
 
 # Returns the total number of groups in the organization.
 def total_num_groups() :
