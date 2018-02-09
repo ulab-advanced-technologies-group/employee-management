@@ -207,7 +207,7 @@ def remove_group(group_name):
         # Commit the changes made to the parent group.
         parent.save_group()
 
-        # drive.delete_directory(title)
+        Drive.delete.directory(group_name)
 
         return True
 
@@ -251,6 +251,7 @@ def add_person_to_mainroster(fields):
 
 def add_person_to_group(SID, role, group):
     person = get_person(SID)
+    group_id = Drive.get_group_id(group)
     if not person:
         print("Please specify a proper person.")
         return False
@@ -259,6 +260,7 @@ def add_person_to_group(SID, role, group):
         print("Please specify a proper group.")
         return False
     group.add_person_to_group(person, role)
+    Drive.add_permissions(person.person_fields[Person.emailAddress], group.name)
     person.save_person()
     return True
     # # Failure Cases
@@ -650,7 +652,6 @@ class Group:
         if not self.isLeaf():
             print("Please specify a more specific subgroup to add this person to.")
             return False
-
         if person.person_fields[Person.SID] in self.people:
             print("This person already exists in the group.")
             return True
@@ -661,6 +662,7 @@ class Group:
                 if group.name not in person.groups:
                     person.groups.add(group.name)
                 group = group.parent
+            Drive.add_permissions(person.person_fields[Person.emailAddress], self.name)
             self.save_group()
             return True
 
@@ -671,12 +673,13 @@ class Group:
         if not person or not isinstance(person, Person):
             print("Please provide a proper person.")
             return False
-
+        Drive.remove_permissions(person.person_fields[Person.emailAddress], self.name)
         if self.isLeaf():
             if person.person_fields[Person.SID] not in self.people:
                 print("This person does not exist in the group.")
                 return True
             else:
+
                 if self.name in person.groups:
                     person.groups.remove(self.name)
                 self.people.pop(person.person_fields[Person.SID], None)
@@ -925,7 +928,6 @@ class Person:
     def remove_person(self):
         ulab = get_group(ROOT_GROUP)
         ulab.remove_person_from_group(self)
-
         mainroster = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=ROSTER).execute()
         values = mainroster.get('values', [])
         roworder = 1
