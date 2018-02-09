@@ -90,9 +90,13 @@ def create_new_directory(name, parentId=parent_directory_id):
     print('Group already in directory')
 
 def delete_directory(name):
-    group_id = get_group_id(name)
-    del_group = service.files().delete(fileId=group_id).execute()
-    return
+    if name != 'ULAB':
+        group_id = get_group_id(name)
+        del_group = service.files().delete(fileId=group_id).execute()
+        print(name, 'deleted')
+    else:
+        print('Cannot delete ULAB')
+
 
 
 def get_group_id(group_name):
