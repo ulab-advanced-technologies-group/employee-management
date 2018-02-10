@@ -137,17 +137,33 @@ def create_group(group_name, parent_name='ulab'):
 ######### For Demo purposes
 
 def create_folder_structure(group):
+    print(group)
     if group.parent == None:
         drive.create_new_directory(group.name)
     else:
         drive.create_new_directory(group.name, drive.get_group_id(group.parent.name))
-    if group.subgroups != set():
+    print(group.subgroups)
+    if not group.isLeaf():
         for subgroup in group.subgroups:
-            create_folder_structure(get_group(subgroup))
+            print(subgroup)
+            create_folder_structure(get_group(subgroup, group))
     else:
         folders = {'Test Folder 1', 'Test Folder 2', 'Test Folder 3'}
         for folder in folders:
+            print(folder)
             drive.create_new_directory(folder, drive.get_group_id(group.name))
+
+        people = list(group.people.keys())
+        people_obj = batch_get_persons(people)
+        emails = [p.person_fields[Person.EMAIL] for p in people_obj if p.person_fields[Person.EMAIL]]
+
+        permission_group = group
+        while permission_group != None:
+            for email in emails:
+                print(permission_group, email)
+                drive.add_permissions(email, permission_group.name)
+            permission_group = permission_group.parent
+
     return True
 
 #########

@@ -97,8 +97,6 @@ def delete_directory(name):
     else:
         print('Cannot delete ULAB')
 
-
-
 def get_group_id(group_name):
     query = """trashed=false and name='""" + group_name + """'"""
     results = service.files().list(pageSize=10, fields="nextPageToken, files(id, name)", q=query).execute()

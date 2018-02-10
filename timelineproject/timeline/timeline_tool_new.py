@@ -17,7 +17,9 @@ def get_events(my_groups):
                 for attendee in attendees:
                     try:
                         if attendee['displayName'] in my_groups: # we can look through attendees for group instead of description
+                            # print(attendee['displayName'], my_groups)
                             if event not in sortedevents:
+                                # print(event)
                                 sortedevents.append(event)
                     except:
                         pass
@@ -99,7 +101,7 @@ def get_events(my_groups):
             pass
 
         print()
-        return timeline
+    return timeline
 
         # start = event['start'].get('dateTime', event['start'].get('date'))
         # end = event['end'].get('dateTime', event['end'].get('date)'))
