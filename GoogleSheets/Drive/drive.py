@@ -117,8 +117,8 @@ def get_permission_id(email_address, group_name):
         if perm['emailAddress'] == email_address:
             return perm['id']
 
-def add_permissions(email_address, group_name):
-    group_id = get_group_id(group_name)
+def add_permissions(email_address, group_name, parent_directory_id=None):
+    group_id = get_group_id(group_name, parent_directory_id=None)
     permissions = {
         'role': 'writer',
         'type': 'user',
