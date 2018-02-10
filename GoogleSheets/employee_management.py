@@ -151,7 +151,8 @@ def create_folder_structure(group):
         folders = {'Test Folder 1', 'Test Folder 2', 'Test Folder 3'}
         for folder in folders:
             print(folder)
-            drive.create_new_directory(folder, drive.get_group_id(group.name, group.parent.name))
+            print('parent', group.parent.name)
+            drive.create_new_directory(folder, drive.get_group_id(group.name, drive.get_group_id(group.parent.name)))
 
         people = list(group.people.keys())
         people_obj = batch_get_persons(people)
