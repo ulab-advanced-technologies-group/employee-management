@@ -153,11 +153,17 @@ def create_folder_structure(group):
 #########
 
 # def get_email_from_SID(SID):
+#     person = get_person(SID)
+#     if not person:
+#         print("Please provide a valid SID.")
+#         return
+#     return person.person_fields[Person.EMAIL]
+
 #     mainroster = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=ROSTER).execute()
 #     values = mainroster.get('values', [])
 #     SID_index = values[0].index('SID')
 #     email_index = values[0].index('email')
-#
+
 #     for row_index in range(1, len(values)):
 #         if str(SID) == values[row_index][SID_index]:
 #             return values[row_index][email_index]
