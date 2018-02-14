@@ -7,7 +7,7 @@ from oauth2client import client
 from oauth2client import tools
 from oauth2client.file import Storage
 
-from Drive import drive
+from Drive import Drive
 
 try:
     import argparse
