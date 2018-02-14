@@ -137,27 +137,57 @@ def create_group(group_name, parent_name='ulab'):
 ######### For Demo purposes
 
 def create_folder_structure(group):
+    print(group)
     if group.parent == None:
         drive.create_new_directory(group.name)
     else:
         drive.create_new_directory(group.name, drive.get_group_id(group.parent.name))
-    if group.subgroups != set():
+    drive.create_new_directory('Content', drive.get_group_id(group.name))
+    print(group.subgroups)
+    if not group.isLeaf():
         for subgroup in group.subgroups:
-            create_folder_structure(get_group(subgroup))
+            print(subgroup)
+            create_folder_structure(get_group(subgroup, group))
     else:
         folders = {'Test Folder 1', 'Test Folder 2', 'Test Folder 3'}
         for folder in folders:
-            drive.create_new_directory(folder, drive.get_group_id(group.name))
+            print(folder)
+            print('parent', group.parent.name)
+            drive.create_new_directory(folder, drive.get_group_id(group.name, drive.get_group_id(group.parent.name)))
+
+
+
+        people = list(group.people.keys())
+        people_obj = batch_get_persons(people)
+        emails = [p.person_fields[Person.EMAIL] for p in people_obj if p.person_fields[Person.EMAIL]]
+
+        permission_group = group
+        while permission_group.parent != None:
+            if permission_group.isLeaf():
+                for email in emails:
+                    drive.add_permissions(email, permission_group.name)
+                    print(permission_group, email)
+            else:
+                for email in emails:
+                    drive.add_permissions(email, 'Content', drive.get_group_id(permission_group.parent.name))
+            permission_group = permission_group.parent
+
     return True
 
 #########
 
 # def get_email_from_SID(SID):
+#     person = get_person(SID)
+#     if not person:
+#         print("Please provide a valid SID.")
+#         return
+#     return person.person_fields[Person.EMAIL]
+
 #     mainroster = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=ROSTER).execute()
 #     values = mainroster.get('values', [])
 #     SID_index = values[0].index('SID')
 #     email_index = values[0].index('email')
-#
+
 #     for row_index in range(1, len(values)):
 #         if str(SID) == values[row_index][SID_index]:
 #             return values[row_index][email_index]

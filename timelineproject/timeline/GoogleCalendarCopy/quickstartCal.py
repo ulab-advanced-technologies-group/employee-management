@@ -66,7 +66,7 @@ def main():
         calendarId='berkeley.edu_u7ffo9gvmuo9ijovg6vcjf07v4@group.calendar.google.com', timeMin=now, maxResults=10, singleEvents=True,
         orderBy='startTime').execute()
     events = eventsResult.get('items', [])
-
+    
     return events
 
 if __name__ == '__main__':

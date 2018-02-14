@@ -12,7 +12,8 @@ def timelinePage():
 def events():
     SID = request.form['inputSID']
     tl = get_events(get_groups(SID))
-    return render_template("events.html", timeline=tl)
+    event_titles = ["Event " + str(i+1) for i in range(len(tl))]
+    return render_template("events.html", timeline=tl, events=event_titles)
 
 if __name__ == "__main__":
     app.debug=True
