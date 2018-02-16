@@ -258,6 +258,7 @@ def check_fields(fields):
     for field_name in fields:
         if field_name in required_fields and not fields[field_name]:
             # Missing some required information.
+            print("Missing a required field.")
             return False
     return True
 
@@ -693,17 +694,17 @@ class Person:
 
     def __init__(self, person_fields={}, exists=False, groups=set([ROOT_GROUP])):
         self.person_fields = {}
-        self.person_fields[Person.SID] = person_fields.get(Person.SID, "-1")
+        self.person_fields[Person.SID] = person_fields.get(Person.SID, "")
         self.person_fields[Person.FIRST_NAME] = person_fields.get(Person.FIRST_NAME, '')
         self.person_fields[Person.MIDDLE_NAME] = person_fields.get(Person.MIDDLE_NAME, '')
         self.person_fields[Person.LAST_NAME] = person_fields.get(Person.LAST_NAME, '')
         self.person_fields[Person.USERNAME] = person_fields.get(Person.USERNAME, '')
-        self.person_fields[Person.EMAIL] = person_fields.get(Person.EMAIL, 'defaultemail@email.com')
+        self.person_fields[Person.EMAIL] = person_fields.get(Person.EMAIL, '')
         self.person_fields[Person.PHONE_NUMBER] = person_fields.get(Person.PHONE_NUMBER, 'XXX-XXX-XXXX')
         self.person_fields[Person.MAJORS] = person_fields.get(Person.MAJORS, [])
-        self.person_fields[Person.BACK_ID] = person_fields.get(Person.BACK_ID, "-1")
+        self.person_fields[Person.BACK_ID] = person_fields.get(Person.BACK_ID, "XXXXXX")
         self.person_fields[Person.DIETARY_PREFERENCES] = person_fields.get(Person.DIETARY_PREFERENCES, 'No Dietary Preference')
-        self.person_fields[Person.EXPECTED_GRADUATION] = person_fields.get(Person.EXPECTED_GRADUATION, 'Default Graduation')
+        self.person_fields[Person.EXPECTED_GRADUATION] = person_fields.get(Person.EXPECTED_GRADUATION, 'N/A')
         self.person_fields[Person.CLASSES] = person_fields.get(Person.CLASSES, [])
         self.person_fields[Person.GOALS] = person_fields.get(Person.GOALS, '')
         self.person_fields[Person.ACCOUNTS] = person_fields.get(Person.ACCOUNTS, [])
