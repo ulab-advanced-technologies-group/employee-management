@@ -254,7 +254,7 @@ def check_fields(fields):
     # if len(fields) != len(Person.FIELDS):
     #     return False
     # else:
-    required_fields = set([Person.SID, Person.FIRST_NAME, Person.LAST_NAME, Person.EMAIL, Person.USERNAME])
+    required_fields = set([Person.SID, Person.FIRST_NAME, Person.LAST_NAME, Person.EMAIL])
     for field_name in fields:
         if field_name in required_fields and not fields[field_name]:
             # Missing some required information.
