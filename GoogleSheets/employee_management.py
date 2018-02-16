@@ -87,7 +87,7 @@ def groups(SID):
     return [get_group(group_name) for group_name in group_names(SID)]
 
 # Returns a list of SIDs of people who are in the provided group.
-def person_from_group(group):
+def person_from_group(group) :
     persons = []
     mainroster = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=ROSTER).execute()
     values = mainroster.get('values', [])
@@ -130,7 +130,7 @@ def create_group(group_name, parent_name='ulab'):
     # Parent got a new subgroup, so we need to save this as well.
     parent.save_group()
 
-    # drive.create_new_directory(name, {}, drive.get_group_id(parent_name))
+    drive.create_new_directory(name, drive.get_group_id(parent_name))
     return True
 
 ######### For Demo purposes
@@ -671,7 +671,6 @@ class Person:
     MIDDLE_NAME = 'middle_name'
     LAST_NAME = 'last_name'
     USERNAME = 'calnet'
-    SUPERVISOR = 'supervisor'
     EMAIL = 'email'
     PHONE_NUMBER = 'phone_no'
     MAJORS = 'majors'
@@ -683,11 +682,11 @@ class Person:
     ACCOUNTS = 'accounts'
     ACCESSES = 'accesses'
 
-    FIELDS = [SID, FIRST_NAME, MIDDLE_NAME, LAST_NAME, USERNAME, SUPERVISOR, EMAIL, PHONE_NUMBER, MAJORS, BACK_ID, DIETARY_PREFERENCES,
+    FIELDS = [SID, FIRST_NAME, MIDDLE_NAME, LAST_NAME, USERNAME, EMAIL, PHONE_NUMBER, MAJORS, BACK_ID, DIETARY_PREFERENCES,
                 EXPECTED_GRADUATION, CLASSES, GOALS, ACCOUNTS, ACCESSES]
 
     HUMAN_FRIENDLY_FIELDS = {SID: 'SID', FIRST_NAME: 'First Name', MIDDLE_NAME: 'Middle Name', LAST_NAME: 'Last Name',
-                            USERNAME: 'CalNet', SUPERVISOR: 'Supervisor', EMAIL: 'Email', PHONE_NUMBER: 'Phone Number',
+                            USERNAME: 'CalNet', EMAIL: 'Email', PHONE_NUMBER: 'Phone Number',
                             MAJORS: 'Majors', BACK_ID: 'Back ID', DIETARY_PREFERENCES: 'Dietary Preferences',
                             EXPECTED_GRADUATION: 'Expected Graduation', CLASSES: 'Classes', GOALS: 'Goals',
                             ACCOUNTS: 'Accounts', ACCESSES: 'Accesses'}
@@ -829,34 +828,34 @@ class Person:
     def add_group(self, group) :
         self.groups.append(group)
 
-    def addRole(Role) :
+    def addRole(self, Role) :
         self.Roles.append(Role)
 
-    def deleteRole(Role) :
+    def deleteRole(self, Role) :
         self.Roles.remove(Role)
 
-    def adjustFirstName(Name) :
+    def adjustFirstName(self, Name) :
         self.FirstName = Name
 
-    def adjustLastName(Name) :
+    def adjustLastName(self, Name) :
         self.LastName = Name
 
-    def adjustMiddleName(Name) :
+    def adjustMiddleName(self, Name) :
         self.MiddleName = Name
 
-    def adjustSID(newSID) :
+    def adjustSID(self, newSID) :
         self.SID = newSID
 
-    def adjustEmail(newEmail):
+    def adjustEmail(self, newEmail):
         self.Email = newEmail
 
-    def adjustPhoneNumber(newPhoneNumber):
+    def adjustPhoneNumber(self, newPhoneNumber):
         self.PhoneNumber = newPhoneNumber
 
-    def dietaryPreferences(DietaryPreferences):
+    def dietaryPreferences(self, DietaryPreferences):
         self.DietaryPreferences = DietaryPreferences
 
-    def linkSchedule(schedule):
+    def linkSchedule(self, schedule):
         self.schedule = schedule
 
     def remove_person(self):
