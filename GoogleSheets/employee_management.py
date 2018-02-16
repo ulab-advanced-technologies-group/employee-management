@@ -765,7 +765,7 @@ class Person:
         self.person_fields[Person.LAST_NAME] = last_name
 
     def set_username(self, username):
-        return self.person_fields[Person.USERNAME] = username
+        self.person_fields[Person.USERNAME] = username
 
     def set_email(self, email):
         self.person_fields[Person.EMAIL] = email
