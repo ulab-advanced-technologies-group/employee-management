@@ -66,6 +66,7 @@ def check_group(name, parentId=parent_directory_id):
     files = service.files().list(fields="files(name, id)", q=query).execute()
     groups = files.get('files')
     for group in groups:
+        print(group)
         if name == group.get('name'):
             return True
         elif check_group(name, group.get('id')):
@@ -74,6 +75,7 @@ def check_group(name, parentId=parent_directory_id):
 
 def create_new_directory(name, parentId=parent_directory_id):
     # Checks if group is subgroup in parent by one level
+    print(name, parentId)
     if not check_group(name, parentId):
         newGroup_metadata = {
             'name': name,
@@ -92,9 +94,9 @@ def create_new_directory(name, parentId=parent_directory_id):
         return
     print('Group already in directory')
 
-def delete_directory(group):
+def delete_directory(group_name, parent_id=None):
     if group.name != 'ULAB' or group.name != 'ulab':
-        group_id = get_group_id(group.name, get_group_id(group.parent.name))
+        group_id = get_group_id(group.name, parent_id)
         del_group = service.files().delete(fileId=group_id).execute()
         print(group.name, 'deleted')
     else:
@@ -124,6 +126,7 @@ def get_permission_id(email_address, group_id):
     for perm in perms:
         if perm['emailAddress'] == email_address:
             return perm['id']
+    return None
 
 def add_permissions(email_address, group_name, parent_directory_id=None):
     group_id = get_group_id(group_name, parent_directory_id)
@@ -139,5 +142,9 @@ def add_permissions(email_address, group_name, parent_directory_id=None):
 def remove_permissions(email_address, group_name, parent_directory_id=None):
     group_id = get_group_id(group_name, parent_directory_id)
     perm_id = get_permission_id(email_address, group_id)
-    del_pm = service.permissions().delete(fileId=group_id, permissionId=perm_id).execute()
-    return
+    if perm_id != None:
+        del_pm = service.permissions().delete(fileId=group_id, permissionId=perm_id).execute()
+        print(email_address, "removed from " + group_name + " folder")
+        return True
+    print(email_address, "not found in given group")
+    return False

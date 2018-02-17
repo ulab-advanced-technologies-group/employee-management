@@ -130,7 +130,9 @@ def create_group(group_name, parent_name='ulab'):
     # Parent got a new subgroup, so we need to save this as well.
     parent.save_group()
 
-    drive.create_new_directory(name, drive.get_group_id(parent_name))
+    parent_id = drive.get_group_id(parent_name)
+    drive.create_new_directory(name, parent_id)
+    drive.create_new_directory('Content', drive.get_group_id(name, parent_id))
     return True
 
 ######### For Demo purposes
@@ -174,23 +176,6 @@ def create_folder_structure(group):
     return True
 
 #########
-
-# def get_email_from_SID(SID):
-#     person = get_person(SID)
-#     if not person:
-#         print("Please provide a valid SID.")
-#         return
-#     return person.person_fields[Person.EMAIL]
-
-#     mainroster = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=ROSTER).execute()
-#     values = mainroster.get('values', [])
-#     SID_index = values[0].index('SID')
-#     email_index = values[0].index('email')
-
-#     for row_index in range(1, len(values)):
-#         if str(SID) == values[row_index][SID_index]:
-#             return values[row_index][email_index]
-
 
 # Returns the total number of groups in the organization.
 def total_num_groups() :
@@ -236,7 +221,8 @@ def remove_group(group_name):
         # Commit the changes made to the parent group.
         parent.save_group()
 
-        drive.delete_directory(group)
+        parent_id = drive.get_group_id(parent.name)
+        drive.delete_directory(group, parent_id)
 
         return True
 
