@@ -277,10 +277,8 @@ def add_person_to_group(SID, role, group_name):
     if not group:
         print("Please specify a proper group.")
         return False
-    group.add_person_to_group(person, role)
-
-    parent_id = drive.get_group_id(group.parent.name)
-    drive.add_permissions(person.person_fields[Person.EMAIL], group.name, parent_id)
+    if not group.add_person_to_group(person, role):
+        return False
 
     person.save_person()
     return True
@@ -294,11 +292,8 @@ def del_person_from_group(SID, group_name):
     if not group:
         print("Please specify a proper group.")
         return False
-    group.remove_person_from_group(person)
-
-    parent_id = drive.get_group_id(group.parent.name)
-    drive.remove_permissions(person.person_fields[Person.EMAIL], group.name, parent_id)
-
+    if not group.remove_person_from_group(person):
+        return False
     person.save_person()
     return True
 
@@ -475,15 +470,22 @@ class Group:
             return False
         if person.person_fields[Person.SID] in self.people:
             print("This person already exists in the group.")
-            return True
+            return False
         else:
             self.people[person.person_fields[Person.SID]] = role
             group = self
+            # Only add the person to the leaf group's corresponding folder. 
+            drive.add_permissions(person.get_email(), group.name)
             while group.parent != None:
                 if group.name not in person.groups:
                     person.groups.add(group.name)
-                group = group.parent
-            # drive.add_permissions(person.person_fields[Person.emailAddress], self.name)
+                # For any folders higher up, only add the person to the upper folder's Content folder.
+                # This maintains utmost secrecy between groups. Design should be updated later to give
+                # members of ulab who are part of the front office to have full access to the parent folder as well.
+                parent_id = drive.get_group_id(group.parent.name)                
+                drive.add_permissions(email, 'Content', parent_id)
+
+                group = group.parent            
             self.save_group()
             return True
 
@@ -494,7 +496,6 @@ class Group:
         if not person or not isinstance(person, Person):
             print("Please provide a proper person.")
             return False
-        # drive.remove_permissions(person.person_fields[Person.emailAddress], self.name)
         if self.isLeaf():
             if person.person_fields[Person.SID] not in self.people:
                 print("This person does not exist in the group.")
@@ -502,17 +503,24 @@ class Group:
             else:
                 if self.name in person.groups:
                     person.groups.remove(self.name)
-                self.people.pop(person.person_fields[Person.SID], None)
+                    parent_id = drive.get_group_id(self.parent.name)
+                    drive.remove_permissions(person.get_email(), self.name, parent_id)
+
+                self.people.pop(person.get_sid(), None)
                 self.save_group()
                 return True
         else:
-            # Remove this group from the set of group names for the person.
-            if self.name in person.groups:
-                person.groups.remove(self.name)
             # Recursively remove the person from subgroups.
             for subgroup in self.get_subgroups():
                 if subgroup and isinstance(subgroup, Group):
                     subgroup.remove_person_from_group(person)
+
+            # Remove this group from the set of group names for the person.
+            if self.name in person.groups:
+                person.groups.remove(self.name)
+                parent_id = drive.get_group_id(self.parent.name)
+                drive.remove_permissions(person.get_email(), "Content", parent_id)
+
             return True
 
     # Still need to call save group on the parent after this call in order to commit the removal of the subgroup.
