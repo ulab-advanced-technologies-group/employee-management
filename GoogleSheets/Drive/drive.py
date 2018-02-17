@@ -59,7 +59,10 @@ parent_directory_id = '1eKHhSEiIAGJn3qEiItvyop6MulVsG-4L'
 
 # If true, group already in directory and subdirectories, false otherwise
 def check_group(name, parentId=parent_directory_id):
-    query = """trashed=false and '""" + parentId + "'" + """ in parents"""
+    if parentId is None:
+        query = """trashed = false"""
+    else:
+        query = """trashed = false and '""" + parentId + "'" + """ in parents"""
     files = service.files().list(fields="files(name, id)", q=query).execute()
     groups = files.get('files')
     for group in groups:
@@ -89,28 +92,33 @@ def create_new_directory(name, parentId=parent_directory_id):
         return
     print('Group already in directory')
 
-def delete_directory(name):
-    if name != 'ULAB' or name != 'ulab':
-        group_id = get_group_id(name)
+def delete_directory(group):
+    if group.name != 'ULAB' or group.name != 'ulab':
+        group_id = get_group_id(group.name, get_group_id(group.parent.name))
         del_group = service.files().delete(fileId=group_id).execute()
-        print(name, 'deleted')
+        print(group.name, 'deleted')
     else:
         print('Cannot delete ULAB')
 
-def get_group_id(group_name, parent_directory_id=None):
-    if parent_directory_id is None:
-        query = """trashed=false and name='""" + group_name + """'"""
+def get_group_id(group_name, parentId=parent_directory_id):
+    if parentId is None:
+        query = """trashed = false and name='""" + group_name + """'"""
     else:
-        query = """trashed=false and name='""" + group_name + """' and parents in '""" + parent_directory_id + """'"""
+        query = """trashed = false and name='""" + group_name + """' and '""" + parentId + "'" + """ in parents"""
+    # print(query)
     results = service.files().list(pageSize=10, fields="nextPageToken, files(id, name)", q=query).execute()
+    # print('results',results)
     items = results.get('files', [])
     if not items:
-        print('No files found.')
+        print('No groups found')
     else:
-        return items[0]['id']
+        for item in items:
+            # print('folder', item)
+            if item['name'] == group_name:
+                return item['id']
+        print('Group not found in folder')
 
-def get_permission_id(email_address, group_name):
-    group_id = get_group_id(group_name)
+def get_permission_id(email_address, group_id):
     response = service.permissions().list(fileId=group_id, fields="permissions(id, emailAddress)").execute()
     perms = response.get('permissions')
     for perm in perms:
@@ -118,7 +126,7 @@ def get_permission_id(email_address, group_name):
             return perm['id']
 
 def add_permissions(email_address, group_name, parent_directory_id=None):
-    group_id = get_group_id(group_name, parent_directory_id=None)
+    group_id = get_group_id(group_name, parent_directory_id)
     permissions = {
         'role': 'writer',
         'type': 'user',
@@ -128,8 +136,8 @@ def add_permissions(email_address, group_name, parent_directory_id=None):
     add_pm = service.permissions().create(fileId=group_id,
                 body=permissions, sendNotificationEmail=False).execute()
 
-def remove_permissions(email_address, group_name):
-    group_id = get_group_id(group_name)
-    perm_id = get_permission_id(email_address, group_name)
+def remove_permissions(email_address, group_name, parent_directory_id=None):
+    group_id = get_group_id(group_name, parent_directory_id)
+    perm_id = get_permission_id(email_address, group_id)
     del_pm = service.permissions().delete(fileId=group_id, permissionId=perm_id).execute()
     return

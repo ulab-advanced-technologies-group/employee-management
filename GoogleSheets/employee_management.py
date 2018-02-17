@@ -236,7 +236,7 @@ def remove_group(group_name):
         # Commit the changes made to the parent group.
         parent.save_group()
 
-        # drive.delete.directory(group_name)
+        drive.delete_directory(group)
 
         return True
 
@@ -279,31 +279,37 @@ def add_person_to_mainroster(fields):
     new_person.save_person()
     return True
 
-def add_person_to_group(SID, role, group):
+def add_person_to_group(SID, role, group_name):
     person = get_person(SID)
-    # group_id = drive.get_group_id(group)
     if not person:
         print("Please specify a proper person.")
         return False
-    group = get_group(group)
+    group = get_group(group_name)
     if not group:
         print("Please specify a proper group.")
         return False
     group.add_person_to_group(person, role)
-    # drive.add_permissions(person.person_fields[Person.emailAddress], group.name)
+
+    parent_id = drive.get_group_id(group.parent.name)
+    drive.add_permissions(person.person_fields[Person.EMAIL], group.name, parent_id)
+
     person.save_person()
     return True
 
-def del_person_from_group(SID, group):
+def del_person_from_group(SID, group_name):
     person = get_person(SID)
     if not person:
         print("Please specify a proper person.")
         return False
-    group = get_group(group)
+    group = get_group(group_name)
     if not group:
         print("Please specify a proper group.")
         return False
     group.remove_person_from_group(person)
+
+    parent_id = drive.get_group_id(group.parent.name)
+    drive.remove_permissions(person.person_fields[Person.EMAIL], group.name, parent_id)
+
     person.save_person()
     return True
 
@@ -726,7 +732,7 @@ class Person:
     def get_username(self):
         return self.person_fields[Person.USERNAME]
     # We are removing the supervisor column from the sheet. Need to go through this person's groups
-    # and collect each of the group's supervisors. 
+    # and collect each of the group's supervisors.
     def get_supervisors(self):
         pass
     def get_email(self):
@@ -750,7 +756,7 @@ class Person:
     def get_accesses(self):
         return self.person_fields[Person.ACCESSES]
 
-    # Setter methods.    
+    # Setter methods.
     def set_sid(self, SID):
         # Need a check to make sure that this new SID doesnt already exist.
         self.person_fields[Person.SID] = SID
@@ -775,7 +781,7 @@ class Person:
 
     def add_major(self, major):
         majors = self.person_fields[Person.MAJORS]
-        if major not in majors:            
+        if major not in majors:
             majors.append(major)
 
     def remove_major(self, major):
@@ -794,7 +800,7 @@ class Person:
 
     def add_class(self, course):
         classes = self.person_fields[Person.CLASSES]
-        if course not in classes:            
+        if course not in classes:
             classes.append(course)
 
     def remove_class(self, course):
