@@ -263,6 +263,9 @@ def add_person_to_mainroster(fields):
         return False
     new_person = Person(person_fields)
     new_person.save_person()
+
+    drive.add_permissions(new_person.get_email(), 'Content', drive.get_group_id('ulab'))
+
     return True
 
 def add_person_to_group(SID, role, group_name):
