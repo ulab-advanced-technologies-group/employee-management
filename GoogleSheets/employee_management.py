@@ -222,7 +222,7 @@ def remove_group(group_name):
         parent.save_group()
 
         parent_id = drive.get_group_id(parent.name)
-        drive.delete_directory(group, parent_id)
+        drive.delete_directory(group_name, parent_id)
 
         return True
 
@@ -474,7 +474,7 @@ class Group:
         else:
             self.people[person.person_fields[Person.SID]] = role
             group = self
-            # Only add the person to the leaf group's corresponding folder. 
+            # Only add the person to the leaf group's corresponding folder.
             drive.add_permissions(person.get_email(), group.name)
             while group.parent != None:
                 if group.name not in person.groups:
@@ -482,10 +482,10 @@ class Group:
                 # For any folders higher up, only add the person to the upper folder's Content folder.
                 # This maintains utmost secrecy between groups. Design should be updated later to give
                 # members of ulab who are part of the front office to have full access to the parent folder as well.
-                parent_id = drive.get_group_id(group.parent.name)                
+                parent_id = drive.get_group_id(group.parent.name)
                 drive.add_permissions(email, 'Content', parent_id)
 
-                group = group.parent            
+                group = group.parent
             self.save_group()
             return True
 

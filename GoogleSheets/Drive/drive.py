@@ -94,11 +94,12 @@ def create_new_directory(name, parentId=parent_directory_id):
         return
     print('Group already in directory')
 
+
 def delete_directory(group_name, parent_id=None):
-    if group.name != 'ULAB' or group.name != 'ulab':
-        group_id = get_group_id(group.name, parent_id)
+    if group_name != 'ULAB' or group_name != 'ulab':
+        group_id = get_group_id(group_name, parent_id)
         del_group = service.files().delete(fileId=group_id).execute()
-        print(group.name, 'deleted')
+        print(group_name, 'deleted')
     else:
         print('Cannot delete ULAB')
 
@@ -109,7 +110,7 @@ def get_group_id(group_name, parentId=parent_directory_id):
         query = """trashed = false and name='""" + group_name + """' and '""" + parentId + "'" + """ in parents"""
     # print(query)
     results = service.files().list(pageSize=10, fields="nextPageToken, files(id, name)", q=query).execute()
-    # print('results',results)
+    print('results',results)
     items = results.get('files', [])
     if not items:
         print('No groups found')
@@ -127,6 +128,7 @@ def get_permission_id(email_address, group_id):
         if perm['emailAddress'] == email_address:
             return perm['id']
     return None
+
 
 def add_permissions(email_address, group_name, parent_directory_id=None):
     group_id = get_group_id(group_name, parent_directory_id)
