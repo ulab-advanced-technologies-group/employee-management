@@ -103,7 +103,7 @@ def delete_directory(group_name, parent_id=None):
     else:
         print('Cannot delete ULAB')
 
-def get_group_id(group_name, parentId=parent_directory_id):
+def get_group_id(group_name, parentId=None):
     if parentId is None:
         query = """trashed = false and name='""" + group_name + """'"""
     else:
