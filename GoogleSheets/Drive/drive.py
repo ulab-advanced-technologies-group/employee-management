@@ -59,7 +59,7 @@ parent_directory_id = '1eKHhSEiIAGJn3qEiItvyop6MulVsG-4L'
 
 # If true, group already in directory and subdirectories, false otherwise
 def check_group(name, parentId=parent_directory_id):
-    if parentId is None:
+    if parentId is parent_directory_id:
         query = """trashed = false"""
     else:
         query = """trashed = false and '""" + parentId + "'" + """ in parents"""
@@ -95,7 +95,7 @@ def create_new_directory(name, parentId=parent_directory_id):
     print('Group already in directory')
 
 
-def delete_directory(group_name, parent_id=None):
+def delete_directory(group_name, parent_id=parent_directory_id):
     if group_name != 'ULAB' or group_name != 'ulab':
         group_id = get_group_id(group_name, parent_id)
         del_group = service.files().delete(fileId=group_id).execute()
@@ -103,7 +103,7 @@ def delete_directory(group_name, parent_id=None):
     else:
         print('Cannot delete ULAB')
 
-def get_group_id(group_name, parentId=None):
+def get_group_id(group_name, parentId=parent_directory_id):
     if parentId is None:
         query = """trashed = false and name='""" + group_name + """'"""
     else:
@@ -130,7 +130,7 @@ def get_permission_id(email_address, group_id):
     return None
 
 
-def add_permissions(email_address, group_name, parent_directory_id=None):
+def add_permissions(email_address, group_name, parent_directory_id=parent_directory_id):
     group_id = get_group_id(group_name, parent_directory_id)
     permissions = {
         'role': 'writer',
@@ -141,7 +141,7 @@ def add_permissions(email_address, group_name, parent_directory_id=None):
     add_pm = service.permissions().create(fileId=group_id,
                 body=permissions, sendNotificationEmail=False).execute()
 
-def remove_permissions(email_address, group_name, parent_directory_id=None):
+def remove_permissions(email_address, group_name, parent_directory_id=parent_directory_id):
     group_id = get_group_id(group_name, parent_directory_id)
     perm_id = get_permission_id(email_address, group_id)
     if perm_id != None:
