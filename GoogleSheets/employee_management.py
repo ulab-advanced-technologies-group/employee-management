@@ -78,7 +78,7 @@ service = main()
 def group_names(SID):
     person = get_person(SID)
     if not person:
-        print("Please provide a valid person in the organization.")
+        print("Please specify a proper person. Please make sure the SID is correct and inputted as a string.")
         return []
     return list(person.groups)
 
@@ -86,21 +86,24 @@ def group_names(SID):
 def groups(SID):
     return [get_group(group_name) for group_name in group_names(SID)]
 
+def get_persons_groups(SID):
+    pass
+
 # Returns a list of SIDs of people who are in the provided group.
 def person_from_group(group) :
     persons = []
     mainroster = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=ROSTER).execute()
     values = mainroster.get('values', [])
-    try:
-        SIDindex = 0
-        group_index = values[0].index(group)
-        num_rows = len(values)
-        num_cols = len(values[0])
-        for row_index in range(1, num_rows):
-            if values[row_index][group_index] == 'y':
-                persons.append(values[row_index][SIDindex])
-    except IndexError as e:
-        pass
+    if not values:
+        print("Error accessing the main roster. Please report this to the Employee Management Team.")
+        return []
+    SIDindex = 0
+    group_index = values[0].index(group)
+    num_rows = len(values)
+    num_cols = len(values[0])
+    for row_index in range(1, num_rows):
+        if values[row_index][group_index] == 'y':
+            persons.append(values[row_index][SIDindex])
     return persons
 
 # Input n should not be zero-indexed.
@@ -123,7 +126,10 @@ def create_group(group_name, parent_name='ulab'):
         print("A group with this name already exists.")
         return False
     if not parent:
-        print("Please specify a valid parent for this new group.")
+        print("Please specify a valid parent for this new group. To create astro under the physics group, call create_group('astro', 'ulab-physics').")
+        return False
+    if parent.hasPeople():
+        print("{} is a leaf group and has people. Please remove these people and then create subgroups for {}".format(parent_name, parent_name))
         return False
     new_group = Group(name=name, parent=parent)
     new_group.save_group()
@@ -186,6 +192,9 @@ def get_all_group_names() :
     groups = []
     mainroster = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=ROSTER).execute()
     values = mainroster.get('values', [])
+    if not values:
+        print("Error accessing the main roster. Please report this to the Employee Management Team.")
+        return []
     try :
         groupIndexStart = group_start_index()
         for group_index in range(groupIndexStart, len(values[0])) :
@@ -198,6 +207,9 @@ def get_all_group_names() :
 def group_start_index() :
     mainroster = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=ROSTER).execute()
     values = mainroster.get('values', [])
+    if not values:
+        print("Error accessing the main roster. Please report this to the Employee Management Team.")
+        return []    
     try :
         for group_index in range(0, len(values[0])) :
             if values[0][group_index].find(ROOT_GROUP) != -1 :
@@ -214,7 +226,7 @@ def remove_group(group_name):
     else:
         group = get_group(group_name)
         if not group:
-            print("Please provide a valid group.")
+            print("Please specify a proper group. Please check the format of the group name. The group name for astro is ulab-physics-astro.")
             return False
         group.remove_group()
         parent = group.parent
@@ -253,13 +265,13 @@ def add_person_to_mainroster(fields):
     # Checks to make sure we have the required fields.
     person_fields = fields.copy()
     if not check_fields(person_fields):
-        print("Fields are not inputted properly.")
+        print("Fields are not inputted properly. Make sure to input fields as a dictionary of values with keys like Person.SID. Required fields are SID, first name, last name, and email.")
         return False
 
     # get_person takes in an integer SID.
     new_person = get_person(int(person_fields[Person.SID]))
     if new_person:
-        print("This person already exists.")
+        print("This person already exists in the main roster.")
         return False
     new_person = Person(person_fields)
     new_person.save_person()
@@ -271,11 +283,11 @@ def add_person_to_mainroster(fields):
 def add_person_to_group(SID, role, group_name):
     person = get_person(SID)
     if not person:
-        print("Please specify a proper person.")
+        print("Please specify a proper person. Please make sure the SID is correct and inputted as a string.")
         return False
     group = get_group(group_name)
     if not group:
-        print("Please specify a proper group.")
+        print("Please specify a proper group. Please check the format of the group name. The group name for astro is ulab-physics-astro.")
         return False
     if not group.add_person_to_group(person, role):
         return False
@@ -286,11 +298,11 @@ def add_person_to_group(SID, role, group_name):
 def del_person_from_group(SID, group_name):
     person = get_person(SID)
     if not person:
-        print("Please specify a proper person.")
+        print("Please specify a proper person. Please make sure the SID is correct and inputted as a string.")
         return False
     group = get_group(group_name)
     if not group:
-        print("Please specify a proper group.")
+        print("Please specify a proper group. Please check the format of the group name. The group name for astro is ulab-physics-astro.")
         return False
     if not group.remove_person_from_group(person):
         return False
@@ -300,7 +312,7 @@ def del_person_from_group(SID, group_name):
 def del_person_from_ulab(SID):
     person = get_person(SID)
     if not person:
-        print("This person does not exist.")
+        print("This person does not exist. Please make sure the SID is correct and inputted as a string.")
         return False
     return person.remove_person()
 
@@ -437,6 +449,10 @@ class Group:
     # Returns whether this group is a leaf or not. The group is a leaf only if there are no subgroups.
     def isLeaf(self):
         return not bool(self.subgroups)
+
+    # Returns whether this group has any people stored at it or not. Should only be true for leaf groups.
+    def hasPeople(self):
+        return self.isLeaf() and len(self.people) > 0
 
     # Takes in a string name of the subgroup we are adding as a child of this group.
     def add_subgroup(self, subgroup):
@@ -830,37 +846,7 @@ class Person:
 
     # Adds the string name of a group to this person.
     def add_group(self, group) :
-        self.groups.append(group)
-
-    def addRole(self, Role) :
-        self.Roles.append(Role)
-
-    def deleteRole(self, Role) :
-        self.Roles.remove(Role)
-
-    def adjustFirstName(self, Name) :
-        self.FirstName = Name
-
-    def adjustLastName(self, Name) :
-        self.LastName = Name
-
-    def adjustMiddleName(self, Name) :
-        self.MiddleName = Name
-
-    def adjustSID(self, newSID) :
-        self.SID = newSID
-
-    def adjustEmail(self, newEmail):
-        self.Email = newEmail
-
-    def adjustPhoneNumber(self, newPhoneNumber):
-        self.PhoneNumber = newPhoneNumber
-
-    def dietaryPreferences(self, DietaryPreferences):
-        self.DietaryPreferences = DietaryPreferences
-
-    def linkSchedule(self, schedule):
-        self.schedule = schedule
+        self.groups.add(group)
 
     def remove_person(self):
         ulab = get_group(ROOT_GROUP)
