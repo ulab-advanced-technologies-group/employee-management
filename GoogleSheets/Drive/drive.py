@@ -54,15 +54,16 @@ service = discovery.build('drive', 'v3', http=http)
 
 # We want to only create a new directory when adding a new group?
 # We want to test creating a directory for entirety of ULAB?
-
+# Folder directory id for the EM_DEMO directory. Will change later when ported to
+# the real ULAB folder.
 parent_directory_id = '1eKHhSEiIAGJn3qEiItvyop6MulVsG-4L'
 
 # If true, group already in directory and subdirectories, false otherwise
 def check_group(name, parentId=parent_directory_id):
-    if parentId is parent_directory_id:
-        query = """trashed = false"""
-    else:
-        query = """trashed = false and '""" + parentId + "'" + """ in parents"""
+    # if parentId is parent_directory_id:
+    #     query = """trashed = false"""
+    # else:
+    query = """trashed = false and '""" + parentId + "'" + """ in parents"""
     files = service.files().list(fields="files(name, id)", q=query).execute()
     groups = files.get('files')
     for group in groups:
@@ -104,10 +105,10 @@ def delete_directory(group_name, parent_id=parent_directory_id):
         print('Cannot delete ULAB')
 
 def get_group_id(group_name, parentId=parent_directory_id):
-    if parentId is None:
-        query = """trashed = false and name='""" + group_name + """'"""
-    else:
-        query = """trashed = false and name='""" + group_name + """' and '""" + parentId + "'" + """ in parents"""
+    # if parentId is None:
+    #     query = """trashed = false and name='""" + group_name + """'"""
+    # else:
+    query = """trashed = false and name='""" + group_name + """' and '""" + parentId + "'" + """ in parents"""
     # print(query)
     results = service.files().list(pageSize=10, fields="nextPageToken, files(id, name)", q=query).execute()
     print('results',results)

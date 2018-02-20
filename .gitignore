@@ -102,3 +102,4 @@ ENV/
 
 # client secrets
 *client_secret.json
+*secret*

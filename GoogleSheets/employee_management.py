@@ -131,14 +131,19 @@ def create_group(group_name, parent_name='ulab'):
     if parent.hasPeople():
         print("{} is a leaf group and has people. Please remove these people and then create subgroups for {}".format(parent_name, parent_name))
         return False
-    new_group = Group(name=name, parent=parent)
+    if not parent.drive_id:
+        print("{} does not have a valid corresponding drive folder. Please check with an admin.")
+        return False
+
+    # Need to get the group's id after successfully creating the corresponding drive folder.
+    drive.create_new_directory(name, parent.drive_id)
+    group_id = drive.get_group_id(name, parent.drive_id)
+    drive.create_new_directory('Content', group_id)
+
+    new_group = Group(name=name, parent=parent, drive_id=group_id)
     new_group.save_group()
     # Parent got a new subgroup, so we need to save this as well.
     parent.save_group()
-
-    parent_id = drive.get_group_id(parent_name)
-    drive.create_new_directory(name, parent_id)
-    drive.create_new_directory('Content', drive.get_group_id(name, parent_id))
     return True
 
 ######### For Demo purposes
@@ -230,11 +235,12 @@ def remove_group(group_name):
             return False
         group.remove_group()
         parent = group.parent
+        if not parent or not parent.drive_id:
+            print("This group's parent is not valid. Please specify a correct group.")
         # Commit the changes made to the parent group.
         parent.save_group()
 
-        parent_id = drive.get_group_id(parent.name)
-        drive.delete_directory(group_name, parent_id)
+        drive.delete_directory(group_name, parent.drive_id)
 
         return True
 
@@ -276,7 +282,7 @@ def add_person_to_mainroster(fields):
     new_person = Person(person_fields)
     new_person.save_person()
 
-    drive.add_permissions(new_person.get_email(), 'Content', drive.get_group_id('ulab'))
+    drive.add_permissions(new_person.get_email(), 'Content', drive.get_group_id(ROOT_GROUP))
 
     return True
 
@@ -346,13 +352,14 @@ def get_group(group_name, parent=None):
         if sid:
             persons[sid] = role
     if group_name == ROOT_GROUP:
-        group = Group(group_name, persons, subgroups, True)
+        group = Group(group_name, persons, subgroups, True, None, drive.get_group_id(group_name))
     else:
         parent_name = values[1][parent_index]
         if parent and isinstance(parent, Group):
-            group = Group(group_name, persons, subgroups, True, parent)
+            group = Group(group_name, persons, subgroups, True, parent, drive.get_group_id(group_name, parent.drive_id))
         else:
-            group = Group(group_name, persons, subgroups, True, get_group(parent_name))
+            par = get_group(parent_name)
+            group = Group(group_name, persons, subgroups, True, par, drive.get_group_id(group_name, par.drive_id))
     return group
 
 
@@ -435,7 +442,7 @@ to the spreadsheet.
 
 class Group:
 
-    def __init__(self, name, people={}, subgroups=set(), exists=False, parent=None):
+    def __init__(self, name, people={}, subgroups=set(), exists=False, parent=None, drive_id=None):
         self.name = name
         self.subgroups = subgroups
         # Stored as a dictionary of SIDs to roles, as Person objects here
@@ -444,6 +451,7 @@ class Group:
         self.people = people.copy()
         self.exists = exists
         self.parent = parent
+        self.drive_id = drive_id
         self.googlegroup = 'example@googlegroups.com'
 
     # Returns whether this group is a leaf or not. The group is a leaf only if there are no subgroups.
@@ -498,8 +506,9 @@ class Group:
                 # For any folders higher up, only add the person to the upper folder's Content folder.
                 # This maintains utmost secrecy between groups. Design should be updated later to give
                 # members of ulab who are part of the front office to have full access to the parent folder as well.
-                parent_id = drive.get_group_id(group.parent.name)
-                drive.add_permissions(email, 'Content', parent_id)
+                if not group.parent.drive_id:
+                    print("Parent group {} does not have a corresponding drive folder id.".format(group.parent))
+                drive.add_permissions(email, 'Content', group.parent.drive_id)
 
                 group = group.parent
             self.save_group()
@@ -519,8 +528,7 @@ class Group:
             else:
                 if self.name in person.groups:
                     person.groups.remove(self.name)
-                    parent_id = drive.get_group_id(self.parent.name)
-                    drive.remove_permissions(person.get_email(), self.name, parent_id)
+                    drive.remove_permissions(person.get_email(), self.name, self.parent.drive_id)
 
                 self.people.pop(person.get_sid(), None)
                 self.save_group()
@@ -534,8 +542,7 @@ class Group:
             # Remove this group from the set of group names for the person.
             if self.name in person.groups:
                 person.groups.remove(self.name)
-                parent_id = drive.get_group_id(self.parent.name)
-                drive.remove_permissions(person.get_email(), "Content", parent_id)
+                drive.remove_permissions(person.get_email(), "Content", self.parent.drive_id)
 
             return True
 
