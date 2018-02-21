@@ -111,7 +111,7 @@ def get_group_id(group_name, parentId=parent_directory_id):
     query = """trashed = false and name='""" + group_name + """' and '""" + parentId + "'" + """ in parents"""
     # print(query)
     results = service.files().list(pageSize=10, fields="nextPageToken, files(id, name)", q=query).execute()
-    print('results',results)
+    # print('results',results)
     items = results.get('files', [])
     if not items:
         print('No groups found')
