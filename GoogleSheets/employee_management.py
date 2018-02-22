@@ -99,7 +99,7 @@ def get_persons_groups(SID):
             # The parent name of this group name is everything in group name before the last hyphen.
             parent_name = group_name.rsplit("-", 1)[0]
             if parent_name in group_dict:
-                # Pass in the parent Group object of the group we are trying to get if possible to optimize. 
+                # Pass in the parent Group object of the group we are trying to get if possible to optimize.
                 group_dict[group_name] = get_group(group_name, group_dict[parent_name])
             else:
                 group_dict[group_name] = get_group(group_name)
@@ -133,6 +133,17 @@ def num_to_letter(n):
         n, remainder = divmod(n - 1, 26)
         string = chr(65 + remainder) + string
     return string
+
+def missing_field(field): # Returns list of SIDs
+    persons = []
+    values = get_values(ROSTER)
+    field_index = values[0].index(field)
+    SID_index = values[0].index('SID')
+    for row_index in range(1, len(values)):
+        if values[row_index][field_index] == '':
+            SID = values[row_index][SID_index]
+            persons.append(SID)
+    return persons
 
 # Creates a new group with the provided group name if it does not already exist.
 # Attaches the group to the provided parent. Creates a group with the name of the
@@ -226,7 +237,7 @@ def get_all_group_names() :
 
 # Returns the column index of the root group on the main roster. This group indicates the beginning of the groups.
 def group_start_index() :
-    values = get_values(ROSTER) 
+    values = get_values(ROSTER)
     try :
         for group_index in range(0, len(values[0])) :
             if values[0][group_index].find(ROOT_GROUP) != -1 :
