@@ -432,6 +432,7 @@ class Group:
         self.people = people.copy()
         self.exists = exists
         self.parent = parent
+
         self.googlegroup = 'example@googlegroups.com'
 
     # Returns whether this group is a leaf or not. The group is a leaf only if there are no subgroups.

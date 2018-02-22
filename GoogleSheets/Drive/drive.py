@@ -85,10 +85,6 @@ def create_new_directory(name, parentId=parent_directory_id):
         newGroup = service.files().create(body=newGroup_metadata, fields='id').execute()
         newGroupId = newGroup['id']
 
-        # if subgroups != {}:
-        #     for subgroup in subgroups:
-        #         create_new_directory(subgroup, {}, newGroupId)
-
         ### adds edit privileges to file/folder
         #add_permissions('khang.nguyencampbell@gmail.com', newGroupId)
         return
