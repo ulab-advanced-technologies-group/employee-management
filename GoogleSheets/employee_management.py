@@ -78,7 +78,7 @@ service = main()
 def group_names(SID):
     person = get_person(SID)
     if not person:
-        print("Please provide a valid person in the organization.")
+        print("Please specify a proper person. Please make sure the SID is correct and inputted as a string.")
         return []
     return list(person.groups)
 
@@ -86,21 +86,44 @@ def group_names(SID):
 def groups(SID):
     return [get_group(group_name) for group_name in group_names(SID)]
 
+# Return a list of Group objects that belong to the given SID. More optimal than above version.
+def get_persons_groups(SID):
+    group_dict = {}
+    all_groups = group_names(SID)
+    # Sort the person's groups by how deep it is in the ULAB tree.
+    all_groups.sort(key=lambda x: x.count("-"))
+    for group_name in all_groups:
+        if group_name == ROOT_GROUP:
+            group_dict[ROOT_GROUP] = get_group(ROOT_GROUP)
+        else:
+            # The parent name of this group name is everything in group name before the last hyphen.
+            parent_name = group_name.rsplit("-", 1)[0]
+            if parent_name in group_dict:
+                # Pass in the parent Group object of the group we are trying to get if possible to optimize.
+                group_dict[group_name] = get_group(group_name, group_dict[parent_name])
+            else:
+                group_dict[group_name] = get_group(group_name)
+    return list(group_dict.values())
+
+def get_values(sheetRange):
+    sheet = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=sheetRange).execute()
+    values = sheet.get('values', [])
+    if not values:
+        print("Error accessing the main roster. Please report this to the Employee Management Team.")
+        return []
+    return values
+
 # Returns a list of SIDs of people who are in the provided group.
 def person_from_group(group) :
     persons = []
-    mainroster = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=ROSTER).execute()
-    values = mainroster.get('values', [])
-    try:
-        SIDindex = 0
-        group_index = values[0].index(group)
-        num_rows = len(values)
-        num_cols = len(values[0])
-        for row_index in range(1, num_rows):
-            if values[row_index][group_index] == 'y':
-                persons.append(values[row_index][SIDindex])
-    except IndexError as e:
-        pass
+    values = get_values(ROSTER)
+    SIDindex = 0
+    group_index = values[0].index(group)
+    num_rows = len(values)
+    num_cols = len(values[0])
+    for row_index in range(1, num_rows):
+        if values[row_index][group_index] == 'y':
+            persons.append(values[row_index][SIDindex])
     return persons
 
 # Input n should not be zero-indexed.
@@ -110,6 +133,17 @@ def num_to_letter(n):
         n, remainder = divmod(n - 1, 26)
         string = chr(65 + remainder) + string
     return string
+
+def missing_field(field): # Returns list of SIDs
+    persons = []
+    values = get_values(ROSTER)
+    field_index = values[0].index(field)
+    SID_index = values[0].index('SID')
+    for row_index in range(1, len(values)):
+        if values[row_index][field_index] == '':
+            SID = values[row_index][SID_index]
+            persons.append(SID)
+    return persons
 
 # Creates a new group with the provided group name if it does not already exist.
 # Attaches the group to the provided parent. Creates a group with the name of the
@@ -123,16 +157,24 @@ def create_group(group_name, parent_name='ulab'):
         print("A group with this name already exists.")
         return False
     if not parent:
-        print("Please specify a valid parent for this new group.")
+        print("Please specify a valid parent for this new group. To create astro under the physics group, call create_group('astro', 'ulab-physics').")
         return False
-    new_group = Group(name=name, parent=parent)
+    if parent.hasPeople():
+        print("{} is a leaf group and has people. Please remove these people and then create subgroups for {}".format(parent_name, parent_name))
+        return False
+    if not parent.drive_id:
+        print("{} does not have a valid corresponding drive folder. Please check with an admin.")
+        return False
+
+    # Need to get the group's id after successfully creating the corresponding drive folder.
+    drive.create_new_directory(name, parent.drive_id)
+    group_id = drive.get_group_id(name, parent.drive_id)
+    drive.create_new_directory('Content', group_id)
+
+    new_group = Group(name=name, parent=parent, drive_id=group_id)
     new_group.save_group()
     # Parent got a new subgroup, so we need to save this as well.
     parent.save_group()
-
-    parent_id = drive.get_group_id(parent_name)
-    drive.create_new_directory(name, parent_id)
-    drive.create_new_directory('Content', drive.get_group_id(name, parent_id))
     return True
 
 ######### For Demo purposes
@@ -184,8 +226,7 @@ def total_num_groups() :
 # Returns a list of the names of all the current groups in the organization.
 def get_all_group_names() :
     groups = []
-    mainroster = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=ROSTER).execute()
-    values = mainroster.get('values', [])
+    values = get_values(ROSTER)
     try :
         groupIndexStart = group_start_index()
         for group_index in range(groupIndexStart, len(values[0])) :
@@ -196,8 +237,7 @@ def get_all_group_names() :
 
 # Returns the column index of the root group on the main roster. This group indicates the beginning of the groups.
 def group_start_index() :
-    mainroster = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=ROSTER).execute()
-    values = mainroster.get('values', [])
+    values = get_values(ROSTER)
     try :
         for group_index in range(0, len(values[0])) :
             if values[0][group_index].find(ROOT_GROUP) != -1 :
@@ -214,15 +254,16 @@ def remove_group(group_name):
     else:
         group = get_group(group_name)
         if not group:
-            print("Please provide a valid group.")
+            print("Please specify a proper group. Please check the format of the group name. The group name for astro is ulab-physics-astro.")
             return False
         group.remove_group()
         parent = group.parent
+        if not parent or not parent.drive_id:
+            print("This group's parent is not valid. Please specify a correct group.")
         # Commit the changes made to the parent group.
         parent.save_group()
 
-        parent_id = drive.get_group_id(parent.name)
-        drive.delete_directory(group_name, parent_id)
+        drive.delete_directory(group_name, parent.drive_id)
 
         return True
 
@@ -253,29 +294,29 @@ def add_person_to_mainroster(fields):
     # Checks to make sure we have the required fields.
     person_fields = fields.copy()
     if not check_fields(person_fields):
-        print("Fields are not inputted properly.")
+        print("Fields are not inputted properly. Make sure to input fields as a dictionary of values with keys like Person.SID. Required fields are SID, first name, last name, and email.")
         return False
 
     # get_person takes in an integer SID.
     new_person = get_person(int(person_fields[Person.SID]))
     if new_person:
-        print("This person already exists.")
+        print("This person already exists in the main roster.")
         return False
     new_person = Person(person_fields)
     new_person.save_person()
 
-    drive.add_permissions(new_person.get_email(), 'Content', drive.get_group_id('ulab'))
+    drive.add_permissions(new_person.get_email(), 'Content', drive.get_group_id(ROOT_GROUP))
 
     return True
 
 def add_person_to_group(SID, role, group_name):
     person = get_person(SID)
     if not person:
-        print("Please specify a proper person.")
+        print("Please specify a proper person. Please make sure the SID is correct and inputted as a string.")
         return False
     group = get_group(group_name)
     if not group:
-        print("Please specify a proper group.")
+        print("Please specify a proper group. Please check the format of the group name. The group name for astro is ulab-physics-astro.")
         return False
     if not group.add_person_to_group(person, role):
         return False
@@ -286,11 +327,11 @@ def add_person_to_group(SID, role, group_name):
 def del_person_from_group(SID, group_name):
     person = get_person(SID)
     if not person:
-        print("Please specify a proper person.")
+        print("Please specify a proper person. Please make sure the SID is correct and inputted as a string.")
         return False
     group = get_group(group_name)
     if not group:
-        print("Please specify a proper group.")
+        print("Please specify a proper group. Please check the format of the group name. The group name for astro is ulab-physics-astro.")
         return False
     if not group.remove_person_from_group(person):
         return False
@@ -300,7 +341,7 @@ def del_person_from_group(SID, group_name):
 def del_person_from_ulab(SID):
     person = get_person(SID)
     if not person:
-        print("This person does not exist.")
+        print("This person does not exist. Please make sure the SID is correct and inputted as a string.")
         return False
     return person.remove_person()
 
@@ -313,10 +354,7 @@ def del_person_from_ulab(SID):
 def get_group(group_name, parent=None):
     if get_sheetid(group_name) == -1:
         return None
-    group_sheet = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=group_name).execute()
-    values = group_sheet.get('values', [])
-    if not values:
-        return None
+    values = get_values(group_name)
     SID_index = values[0].index('SID')
     role_index = values[0].index('Role')
     subgroup_index = values[0].index("Subgroups")
@@ -334,13 +372,14 @@ def get_group(group_name, parent=None):
         if sid:
             persons[sid] = role
     if group_name == ROOT_GROUP:
-        group = Group(group_name, persons, subgroups, True)
+        group = Group(group_name, persons, subgroups, True, None, drive.get_group_id(group_name))
     else:
         parent_name = values[1][parent_index]
         if parent and isinstance(parent, Group):
-            group = Group(group_name, persons, subgroups, True, parent)
+            group = Group(group_name, persons, subgroups, True, parent, drive.get_group_id(group_name, parent.drive_id))
         else:
-            group = Group(group_name, persons, subgroups, True, get_group(parent_name))
+            par = get_group(parent_name)
+            group = Group(group_name, persons, subgroups, True, par, drive.get_group_id(group_name, par.drive_id))
     return group
 
 
@@ -348,10 +387,7 @@ def get_group(group_name, parent=None):
 # Needs access to the spreadsheets. Needs to create a Person instance according to the constructor defined in the Person class.
 # For now just create the Person instance with basic field information (name, sid, email, etc.). We can add other fields later.
 def get_person(SID):
-    mainroster = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=ROSTER).execute()
-    values = mainroster.get('values', [])
-    if not values:
-        return None
+    values = get_values(ROSTER)
     person_fields = {}
     for row_index in range(1, len(values)):
         # SID is at the first column.
@@ -381,10 +417,7 @@ def get_person(SID):
 
 # Returns a list of person objects given a list of SIDs. More efficient than calling get_person n times.
 def batch_get_persons(SIDs):
-    mainroster = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=ROSTER).execute()
-    values = mainroster.get('values', [])
-    if not values:
-        return []
+    values = get_values(ROSTER)
     res = []
     for SID in SIDs:
         person_fields = {}
@@ -423,7 +456,7 @@ to the spreadsheet.
 
 class Group:
 
-    def __init__(self, name, people={}, subgroups=set(), exists=False, parent=None):
+    def __init__(self, name, people={}, subgroups=set(), exists=False, parent=None, drive_id=None):
         self.name = name
         self.subgroups = subgroups
         # Stored as a dictionary of SIDs to roles, as Person objects here
@@ -432,12 +465,16 @@ class Group:
         self.people = people.copy()
         self.exists = exists
         self.parent = parent
-
+        self.drive_id = drive_id
         self.googlegroup = 'example@googlegroups.com'
 
     # Returns whether this group is a leaf or not. The group is a leaf only if there are no subgroups.
     def isLeaf(self):
         return not bool(self.subgroups)
+
+    # Returns whether this group has any people stored at it or not. Should only be true for leaf groups.
+    def hasPeople(self):
+        return self.isLeaf() and len(self.people) > 0
 
     # Takes in a string name of the subgroup we are adding as a child of this group.
     def add_subgroup(self, subgroup):
@@ -483,8 +520,9 @@ class Group:
                 # For any folders higher up, only add the person to the upper folder's Content folder.
                 # This maintains utmost secrecy between groups. Design should be updated later to give
                 # members of ulab who are part of the front office to have full access to the parent folder as well.
-                parent_id = drive.get_group_id(group.parent.name)
-                drive.add_permissions(email, 'Content', parent_id)
+                if not group.parent.drive_id:
+                    print("Parent group {} does not have a corresponding drive folder id.".format(group.parent))
+                drive.add_permissions(email, 'Content', group.parent.drive_id)
 
                 group = group.parent
             self.save_group()
@@ -504,8 +542,7 @@ class Group:
             else:
                 if self.name in person.groups:
                     person.groups.remove(self.name)
-                    parent_id = drive.get_group_id(self.parent.name)
-                    drive.remove_permissions(person.get_email(), self.name, parent_id)
+                    drive.remove_permissions(person.get_email(), self.name, self.parent.drive_id)
 
                 self.people.pop(person.get_sid(), None)
                 self.save_group()
@@ -519,8 +556,7 @@ class Group:
             # Remove this group from the set of group names for the person.
             if self.name in person.groups:
                 person.groups.remove(self.name)
-                parent_id = drive.get_group_id(self.parent.name)
-                drive.remove_permissions(person.get_email(), "Content", parent_id)
+                drive.remove_permissions(person.get_email(), "Content", self.parent.drive_id)
 
             return True
 
@@ -532,8 +568,7 @@ class Group:
         if get_sheetid(self.name) == -1:
             print("Group has no corresponding sheet.")
             return
-        group_sheet = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=self.name).execute()
-        values = group_sheet.get('values', [])
+        values = get_values(self.name)
         for subgroup in self.get_subgroups():
             if subgroup and isinstance(subgroup, Group):
                 subgroup.remove_group()
@@ -545,8 +580,8 @@ class Group:
                 }
             }
         ]
-        mainroster = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=ROSTER).execute()
-        title_row = mainroster.get('values', [])[0]
+        values = get_values(ROSTER)
+        title_row = values[0]
         column_index = title_row.index(self.name)
         delmaincolumnreq = [{
                 "deleteDimension": {
@@ -601,8 +636,7 @@ class Group:
                 self.parent.add_subgroup(self.name)
 
             # Add group to mainroster column.
-            mainroster = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=ROSTER).execute()
-            values = mainroster.get('values', [])
+            values = get_values(ROSTER)
             num_rows = len(values)
             num_cols = len(values[0])
             # Fill the default values with the student number of n's to indicate no one is a part of this group yet.
@@ -670,6 +704,9 @@ to the spreadsheet.
 """
 
 class Person:
+
+    ROLES = {"supervisor": "Supervisor"}
+
     # Define fields for the Person type here.
     SID  = 'SID'
     FIRST_NAME = 'first_name'
@@ -732,7 +769,15 @@ class Person:
     # We are removing the supervisor column from the sheet. Need to go through this person's groups
     # and collect each of the group's supervisors.
     def get_supervisors(self):
-        pass
+        groups = get_persons_groups(self.get_sid())
+        leaf_groups = filter(lambda x: x and x.isLeaf(), groups)
+        supervisors = set()
+        for leaf in leaf_groups:
+            for sid, role in leaf.people:
+                if role == Person.ROLES["supervisor"]:
+                    supervisors.add(sid)
+        return batch_get_persons(list(supervisors))
+
     def get_email(self):
         return self.person_fields[Person.EMAIL]
     def get_phone(self):
@@ -831,43 +876,12 @@ class Person:
 
     # Adds the string name of a group to this person.
     def add_group(self, group) :
-        self.groups.append(group)
-
-    def addRole(self, Role) :
-        self.Roles.append(Role)
-
-    def deleteRole(self, Role) :
-        self.Roles.remove(Role)
-
-    def adjustFirstName(self, Name) :
-        self.FirstName = Name
-
-    def adjustLastName(self, Name) :
-        self.LastName = Name
-
-    def adjustMiddleName(self, Name) :
-        self.MiddleName = Name
-
-    def adjustSID(self, newSID) :
-        self.SID = newSID
-
-    def adjustEmail(self, newEmail):
-        self.Email = newEmail
-
-    def adjustPhoneNumber(self, newPhoneNumber):
-        self.PhoneNumber = newPhoneNumber
-
-    def dietaryPreferences(self, DietaryPreferences):
-        self.DietaryPreferences = DietaryPreferences
-
-    def linkSchedule(self, schedule):
-        self.schedule = schedule
+        self.groups.add(group)
 
     def remove_person(self):
         ulab = get_group(ROOT_GROUP)
         ulab.remove_person_from_group(self)
-        mainroster = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=ROSTER).execute()
-        values = mainroster.get('values', [])
+        values = get_values(ROSTER)
         roworder = 1
         requests = []
         SIDindex = 0
@@ -902,8 +916,7 @@ class Person:
         return values
 
     def save_person(self):
-        mainroster = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=ROSTER).execute()
-        values = mainroster.get('values', [])
+        values = get_values(ROSTER)
         title_row = values[0]
         num_rows = len(values)
         num_cols = len(values[0])
@@ -939,6 +952,9 @@ class Person:
                 ]
         }
         update_person_response = service.spreadsheets().values().batchUpdate(spreadsheetId=spreadsheet_Id, body=update_person_body).execute()
+
+    def __repr__(self):
+        return self.get_first_name().capitalize() + self.get_middle_name().capitalize() + self.get_last_name().capitalize()
 
 if __name__ == '__main__':
     main()
