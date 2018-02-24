@@ -67,18 +67,27 @@ def main():
     return service
 
 def get_sheets(service):
-    try :
+    try:
         sheet_metadata = service.spreadsheets().get(spreadsheetId=spreadsheet_Id).execute()
-    except :
-        print("Sheet metadata could not be accessed. There is an issue with the API. Please contact the Employee Management team in ATG.")
+    except Exception as e:
+        print("Sheet metadata could not be accessed. Check your connection and rerun the tool. If the issue persists, please contact the Employee Management team in ATG.")
+        print(e)
+        sys.exit(1)
     sheets = sheet_metadata.get('sheets', '')
     return sheets
 
 spreadsheet_Id = '1k5OgXFL_o99gbgqD_MJt6LuggL4KRGBI27SIW45-FgQ'
 service = main()
 
+# Wrapper check for several of the functions below which does some type checking and length checking on SID.
+def check_sid(SID):
+    return type(SID) == str and len(SID) < 15 and len(SID) > 6
+
 # Returns a list of the names of the groups that belong to the person with this SID.
 def group_names(SID):
+    if not check_sid(SID):
+        print("SID is not inputted properly. Check that it is correct and is a string in quotes.")
+        return
     person = get_person(SID)
     if not person:
         print("Please specify a proper person. Please make sure the SID is correct and inputted as a string.")
@@ -87,10 +96,16 @@ def group_names(SID):
 
 # Returns a list of Group objects that belong to the given SID.
 def groups(SID):
+    if not check_sid(SID):
+        print("SID is not inputted properly. Check that it is correct and is a string in quotes.")
+        return
     return [get_group(group_name) for group_name in group_names(SID)]
 
 # Return a list of Group objects that belong to the given SID. More optimal than above version.
 def get_persons_groups(SID):
+    if not check_sid(SID):
+        print("SID is not inputted properly. Check that it is correct and is a string in quotes.")
+        return
     group_dict = {}
     all_groups = group_names(SID)
     # Sort the person's groups by how deep it is in the ULAB tree.
@@ -109,11 +124,13 @@ def get_persons_groups(SID):
     return list(group_dict.values())
 
 def get_values(sheetRange):
-    try :
+    try:
         sheet = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=sheetRange).execute()
         values = sheet.get('values', [])
-    except :
-        print("Sheet values could not be accessed. There is an issue with the API. Please contact the Employee Management team in ATG.")
+    except Exception as e:
+        print("Sheet metadata could not be accessed. Check your connection and rerun the tool. If the issue persists, please contact the Employee Management team in ATG.")
+        print(e)
+        sys.exit(1)
     if not values:
         print("Error accessing the main roster. Please report this to the Employee Management Team.")
         return []
@@ -183,78 +200,82 @@ def create_group(group_name, parent_name='ulab'):
     parent.save_group()
     return True
 
-######### For Demo purposes
+######### FOR DEMO PURPOSES ONLY
 
-def create_folder_structure(group):
-    print(group)
-    if group.parent == None:
-        drive.create_new_directory(group.name)
-    else:
-        drive.create_new_directory(group.name, drive.get_group_id(group.parent.name))
-    drive.create_new_directory('Content', drive.get_group_id(group.name))
-    print(group.subgroups)
-    if not group.isLeaf():
-        for subgroup in group.subgroups:
-            print(subgroup)
-            create_folder_structure(get_group(subgroup, group))
-    else:
-        folders = {'Test Folder 1', 'Test Folder 2', 'Test Folder 3'}
-        for folder in folders:
-            print(folder)
-            print('parent', group.parent.name)
-            try :
-                drive.create_new_directory(folder, drive.get_group_id(group.name, drive.get_group_id(group.parent.name)))
-            except :
-                print("A drive directory was unable to be created. There is an issue with the API. Please contact the Employee Management team in ATG.")
+# def create_folder_structure(group):
+#     print(group)
+#     if group.parent == None:
+#         drive.create_new_directory(group.name)
+#     else:
+#         drive.create_new_directory(group.name, drive.get_group_id(group.parent.name))
+#     drive.create_new_directory('Content', drive.get_group_id(group.name))
+#     print(group.subgroups)
+#     if not group.isLeaf():
+#         for subgroup in group.subgroups:
+#             print(subgroup)
+#             create_folder_structure(get_group(subgroup, group))
+#     else:
+#         folders = {'Test Folder 1', 'Test Folder 2', 'Test Folder 3'}
+#         for folder in folders:
+#             print(folder)
+#             print('parent', group.parent.name)
+#             try :
+#                 drive.create_new_directory(folder, drive.get_group_id(group.name, drive.get_group_id(group.parent.name)))
+#             except :
+#                 print("A drive directory was unable to be created. There is an issue with the API. Please contact the Employee Management team in ATG.")
 
 
-        people = list(group.people.keys())
-        people_obj = batch_get_persons(people)
-        emails = [p.person_fields[Person.EMAIL] for p in people_obj if p.person_fields[Person.EMAIL]]
+#         people = list(group.people.keys())
+#         people_obj = batch_get_persons(people)
+#         emails = [p.person_fields[Person.EMAIL] for p in people_obj if p.person_fields[Person.EMAIL]]
 
-        permission_group = group
-        while permission_group.parent != None:
-            if permission_group.isLeaf():
-                for email in emails:
-                    drive.add_permissions(email, permission_group.name)
-                    print(permission_group, email)
-            else:
-                for email in emails:
-                    try :
-                        drive.add_permissions(email, 'Content', drive.get_group_id(permission_group.parent.name))
-                    except :
-                        print("Drive permissions were unable to be added. There is an issue with the API. Please contact the Employee Management team in ATG.")
-            permission_group = permission_group.parent
+#         permission_group = group
+#         while permission_group.parent != None:
+#             if permission_group.isLeaf():
+#                 for email in emails:
+#                     drive.add_permissions(email, permission_group.name)
+#                     print(permission_group, email)
+#             else:
+#                 for email in emails:
+#                     try :
+#                         drive.add_permissions(email, 'Content', drive.get_group_id(permission_group.parent.name))
+#                     except :
+#                         print("Drive permissions were unable to be added. There is an issue with the API. Please contact the Employee Management team in ATG.")
+#             permission_group = permission_group.parent
 
-    return True
+#     return True
 
 #########
 
 # Returns the total number of groups in the organization.
-def total_num_groups() :
+def total_num_groups():
     return len(get_all_group_names())
 
 # Returns a list of the names of all the current groups in the organization.
-def get_all_group_names() :
+def get_all_group_names():
     groups = []
     values = get_values(ROSTER)
-    try :
+    try:
         groupIndexStart = group_start_index()
-        for group_index in range(groupIndexStart, len(values[0])) :
+        for group_index in range(groupIndexStart, len(values[0])):
             groups.append(values[0][group_index])
-    except:
-        pass # Ignores sheets
+    except IndexError as e:
+        print("Error in accessing the values of the sheet. Values are not filled. Check your connection and rerun the tool. Please contact the Employee Management team in ATG if the issue persists.")
+        print(e)
+        sys.exit(1)
     return groups
 
 # Returns the column index of the root group on the main roster. This group indicates the beginning of the groups.
 def group_start_index() :
     values = get_values(ROSTER)
-    try :
-        for group_index in range(0, len(values[0])) :
-            if values[0][group_index].find(ROOT_GROUP) != -1 :
+    try:
+        for group_index in range(0, len(values[0])):
+            if values[0][group_index].find(ROOT_GROUP) != -1:
                 break
-    except :
-        pass # Ignores Sheets
+    except IndexError as e:
+        print("Error in accessing the values of the sheet. Values are not filled. Check your connection and rerun the tool. Please contact the Employee Management team in ATG if the issue persists.")
+        print(e)
+        sys.exit(1)
     return group_index
 
 # Removes the group with the given title. Does not allow removal of the root group.
@@ -321,6 +342,9 @@ def add_person_to_mainroster(fields):
     return True
 
 def add_person_to_group(SID, role, group_name):
+    if not check_sid(SID):
+        print("SID is not inputted properly. Check that it is correct and is a string in quotes.")
+        return
     person = get_person(SID)
     if not person:
         print("Please specify a proper person. Please make sure the SID is correct and inputted as a string.")
@@ -336,6 +360,9 @@ def add_person_to_group(SID, role, group_name):
     return True
 
 def del_person_from_group(SID, group_name):
+    if not check_sid(SID):
+        print("SID is not inputted properly. Check that it is correct and is a string in quotes.")
+        return
     person = get_person(SID)
     if not person:
         print("Please specify a proper person. Please make sure the SID is correct and inputted as a string.")
@@ -350,6 +377,9 @@ def del_person_from_group(SID, group_name):
     return True
 
 def del_person_from_ulab(SID):
+    if not check_sid(SID):
+        print("SID is not inputted properly. Check that it is correct and is a string in quotes.")
+        return
     person = get_person(SID)
     if not person:
         print("This person does not exist. Please make sure the SID is correct and inputted as a string.")
@@ -398,6 +428,9 @@ def get_group(group_name, parent=None):
 # Needs access to the spreadsheets. Needs to create a Person instance according to the constructor defined in the Person class.
 # For now just create the Person instance with basic field information (name, sid, email, etc.). We can add other fields later.
 def get_person(SID):
+    if not check_sid(SID):
+        print("SID is not inputted properly. Check that it is correct and is a string in quotes.")
+        return
     values = get_values(ROSTER)
     person_fields = {}
     for row_index in range(1, len(values)):
@@ -428,6 +461,9 @@ def get_person(SID):
 
 # Returns a list of person objects given a list of SIDs. More efficient than calling get_person n times.
 def batch_get_persons(SIDs):
+    check = all([check_sid(SID) for SID in SIDs])
+    if not check:
+        return
     values = get_values(ROSTER)
     res = []
     for SID in SIDs:
@@ -618,14 +654,13 @@ class Group:
         ]
         delete_group_body = {"requests": delsheetrequest}
         delete_group_column = {"requests": delmaincolumnreq}
-        try :
+        try:
             delete_group_response = service.spreadsheets().batchUpdate(spreadsheetId=spreadsheet_Id, body=delete_group_body).execute()
-        except :
-            print("The sheet was unable to be removed due to the batch not updating in the spreadsheet. There is an issue with the API. Please contact the Employee Management team in ATG.")
-        try :
             delete_group_column_response = service.spreadsheets().batchUpdate(spreadsheetId=spreadsheet_Id, body=delete_group_column).execute()
-        except :
+        except Exception as e:
             print("The column was unable to be removed due to the batch not updating in the spreadsheet. There is an issue with the API. Please contact the Employee Management team in ATG.")
+            print(e)
+            sys.exit(1)
 
     # This function will be called to save changes made to a group. It is essentially a commit
     # after the user does a series of transactions on the Group object.
@@ -636,7 +671,7 @@ class Group:
             requests = []
             title_row = ["SID", "Role", "Subgroups", "Parent"]
             empty_values = ['', '', '', self.parent.name]
-        try :
+
             requests.append({
                     "addSheet": {
                         "properties": {
@@ -658,18 +693,20 @@ class Group:
             }
             if requests:
                 body = {'requests': requests}
-                add_sheet_response = service.spreadsheets().batchUpdate(spreadsheetId=spreadsheet_Id, body=body).execute()
-                add_group_template_response = service.spreadsheets().values().batchUpdate(spreadsheetId=spreadsheet_Id, body=new_group_body).execute()
+                try:
+                    add_sheet_response = service.spreadsheets().batchUpdate(spreadsheetId=spreadsheet_Id, body=body).execute()
+                    add_group_template_response = service.spreadsheets().values().batchUpdate(spreadsheetId=spreadsheet_Id, body=new_group_body).execute()
+                except Exception as e:
+                    print("The sheet either could not be filled in or could not be added. There is an issue with the API. Please contact the Employee Management team in ATG.")
+                    print(e)
+                    sys.exit(1)
             if self.parent:
                 self.parent.add_subgroup(self.name)
-        except :
-            print("The sheet either could not be filled in or could not be added. There is an issue with the API. Please contact the Employee Management team in ATG.")
             # Add group to mainroster column.
             values = get_values(ROSTER)
             num_rows = len(values)
             num_cols = len(values[0])
             # Fill the default values with the student number of n's to indicate no one is a part of this group yet.
-        try :
             default_values = [self.name]
             letter = num_to_letter(num_cols + 1)
             for i in range(num_rows - 1):
@@ -687,10 +724,6 @@ class Group:
                         }
                     ]
             }
-            try :
-                new_group_column_response = service.spreadsheets().values().batchUpdate(spreadsheetId=spreadsheet_Id, body=new_group_column_body).execute()
-            except :
-                print("The default column body could not be created.There is an issue with the API. Please contact the Employee Management team in ATG.")
             addemptycolumnreq = [{
                 "appendDimension": {
                     "sheetId": get_sheetid(ROSTER),
@@ -700,35 +733,39 @@ class Group:
                 }
             ]
             append_empty_body = {"requests": addemptycolumnreq}
-            append_empty_column_response = service.spreadsheets().batchUpdate(spreadsheetId=spreadsheet_Id, body=append_empty_body).execute()
-        except :
-            print("The default group column values of 'n' could not be added. There is an issue with the API. Please contact the Employee Management team in ATG.")
+            try:
+                new_group_column_response = service.spreadsheets().values().batchUpdate(spreadsheetId=spreadsheet_Id, body=new_group_column_body).execute()
+                append_empty_column_response = service.spreadsheets().batchUpdate(spreadsheetId=spreadsheet_Id, body=append_empty_body).execute()
+            except Exception as e:
+                print("The default column body could not be created. Check your connection and rerun the tool. If the issue persists, contact the Employee Management team in ATG.")
+                print(e)
+                sys.exit(1)
 
-            SID_column = ['SID']
-            role_column = ['Role']
-            subgroup_column = ['Subgroups'] + list(self.subgroups)
-            parent = ['Parent', self.parent.name if self.parent else '']
-            for SID in self.people:
-                SID_column.append(SID)
-                role_column.append(self.people[SID])
-            # To account for cases where either we delete a subgroup, or delete a person from this group.
-        try :
-            subgroup_column += ['']
-            SID_column += ['']
-            role_column += ['']
-            longest_col = max([len(SID_column), len(role_column), len(subgroup_column), len(parent)])
-            body = {
-                'valueInputOption': "USER_ENTERED",
-                "data": [
-                    {
-                        "range": self.name + "!A1:D" + str(longest_col),
-                        "majorDimension": "COLUMNS",
-                        "values": [SID_column, role_column, subgroup_column, parent]
-                    }
-                ]
-            }
+        SID_column = ['SID']
+        role_column = ['Role']
+        subgroup_column = ['Subgroups'] + list(self.subgroups)
+        parent = ['Parent', self.parent.name if self.parent else '']
+        for SID in self.people:
+            SID_column.append(SID)
+            role_column.append(self.people[SID])
+        # To account for cases where either we delete a subgroup, or delete a person from this group.
+        subgroup_column += ['']
+        SID_column += ['']
+        role_column += ['']
+        longest_col = max([len(SID_column), len(role_column), len(subgroup_column), len(parent)])
+        body = {
+            'valueInputOption': "USER_ENTERED",
+            "data": [
+                {
+                    "range": self.name + "!A1:D" + str(longest_col),
+                    "majorDimension": "COLUMNS",
+                    "values": [SID_column, role_column, subgroup_column, parent]
+                }
+            ]
+        }
+        try:
             overWriteGroup = service.spreadsheets().values().batchUpdate(spreadsheetId=spreadsheet_Id, body=body).execute()
-        except :
+        except:
             print("Either the changes of deleting a subgroup or deleting a person could not be accounted for. There is an issue with the API. Please contact the Employee Management team in ATG.s")
 
     def __repr__(self):
