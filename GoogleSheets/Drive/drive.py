@@ -67,8 +67,10 @@ def check_group(name, parentId=parent_directory_id):
     try :
         files = service.files().list(fields="files(name, id)", q=query).execute()
         groups = files.get('files')
-    except :
+    except Exception as e :
         print("The files that have corresponding group names and IDs could not be accessed. There is an issue with the API. Please contact the Employee Management team in ATG.")
+        print(e)
+        sys.exit(1)
     for group in groups:
         print(group)
         if name == group.get('name'):
@@ -89,8 +91,10 @@ def create_new_directory(name, parentId=parent_directory_id):
         try :
             newGroup = service.files().create(body=newGroup_metadata, fields='id').execute()
             newGroupId = newGroup['id']
-        except :
+        except Exception as e :
             print("A group directory could not be created. There is an issue with the API. Please contact the Employee Management team in ATG.")
+            print(e)
+            sys.exit(1)
 
         ### adds edit privileges to file/folder
         #add_permissions('khang.nguyencampbell@gmail.com', newGroupId)
@@ -103,8 +107,10 @@ def delete_directory(group_name, parent_id=parent_directory_id):
         group_id = get_group_id(group_name, parent_id)
         try :
             del_group = service.files().delete(fileId=group_id).execute()
-        except :
+        except Exception as e :
             print("The group directory could not be deleted. There is an issue with the API. Please contact the Employee Management team in ATG.")
+            print(e)
+            sys.exit(1)
         print(group_name, 'deleted')
     else:
         print('Cannot delete ULAB')
@@ -117,8 +123,10 @@ def get_group_id(group_name, parentId=parent_directory_id):
     # print(query)
     try :
         results = service.files().list(pageSize=10, fields="nextPageToken, files(id, name)", q=query).execute()
-    except :
+    except Exception as e :
         print("The files that have corresponding group names and IDs could not be accessed. There is an issue with the API. Please contact the Employee Management team in ATG.")
+        print(e)
+        sys.exit(1)
     # print('results',results)
     items = results.get('files', [])
     if not items:
@@ -133,8 +141,10 @@ def get_group_id(group_name, parentId=parent_directory_id):
 def get_permission_id(email_address, group_id):
     try :
         response = service.permissions().list(fileId=group_id, fields="permissions(id, emailAddress)").execute()
-    except :
+    except Exception as e :
         print("The permissions could not be accessed for this group. There is an issue with the API. Please contact the Employee Management team in ATG.")
+        print(e)
+        sys.exit(1)
         perms = response.get('permissions')
         for perm in perms:
             if perm['emailAddress'] == email_address:
@@ -151,17 +161,20 @@ def add_permissions(email_address, group_name, parent_directory_id=parent_direct
     try :
         add_pm = service.permissions().create(fileId=group_id,
                     body=permissions, sendNotificationEmail=False).execute()
-    except :
+    except Exception as e :
         print("The permissions were unable to be added. There is an issue with the API.Please contact the Employee Management team in ATG.")
-
+        print(e)
+        sys.exit(1)
 def remove_permissions(email_address, group_name, parent_directory_id=parent_directory_id):
     group_id = get_group_id(group_name, parent_directory_id)
     perm_id = get_permission_id(email_address, group_id)
     if perm_id != None:
         try :
             del_pm = service.permissions().delete(fileId=group_id, permissionId=perm_id).execute()
-        except :
+        except Exception as e :
             print("The permissions were unable to be removed. There is an issue with the API. Please contact the Employee Management team in ATG.")
+            print(e)
+            sys.exit(1)
         print(email_address, "removed from " + group_name + " folder")
         return True
     print(email_address, "not found in given group")
