@@ -6,6 +6,7 @@ from apiclient import discovery
 from oauth2client import client
 from oauth2client import tools
 from oauth2client.file import Storage
+import sys
 
 from Drive import drive
 
@@ -128,11 +129,11 @@ def get_values(sheetRange):
         sheet = service.spreadsheets().values().get(spreadsheetId=spreadsheet_Id, range=sheetRange).execute()
         values = sheet.get('values', [])
     except Exception as e:
-        print("Sheet metadata could not be accessed. Check your connection and rerun the tool. If the issue persists, please contact the Employee Management team in ATG.")
+        print("Sheet {} could not be accessed. Check your connection and rerun the tool. If the issue persists, please contact the Employee Management team in ATG.".format(sheetRange))
         print(e)
         sys.exit(1)
     if not values:
-        print("Error accessing the main roster. Please report this to the Employee Management Team.")
+        print("Error accessing {}. Please report this to the Employee Management Team.".format(sheetRange))
         return []
     return values
 
@@ -247,6 +248,14 @@ def create_group(group_name, parent_name='ulab'):
 
 #########
 
+# Returns a printed tree of the ULAB organization chart. 
+def print_tree():
+	ulab = get_group(ROOT_GROUP)
+	if not ulab:
+		print("Could not access the root group.")
+		return False
+	print(ulab)
+
 # Returns the total number of groups in the organization.
 def total_num_groups():
     return len(get_all_group_names())
@@ -345,6 +354,9 @@ def add_person_to_group(SID, role, group_name):
     if not check_sid(SID):
         print("SID is not inputted properly. Check that it is correct and is a string in quotes.")
         return
+    if type(role) != str:
+    	print("Please input the role as a string.")
+    	return
     person = get_person(SID)
     if not person:
         print("Please specify a proper person. Please make sure the SID is correct and inputted as a string.")
@@ -358,6 +370,14 @@ def add_person_to_group(SID, role, group_name):
 
     person.save_person()
     return True
+
+def add_people_to_group(SIDs, roles, group):
+	if len(SIDs) != len(roles):
+		print("Please check the number of SIDS and roles passed in.")
+		return
+	for SID, role in zip(SIDs, roles):
+		add_person_to_group(SID, role, group_name)
+	return True
 
 def del_person_from_group(SID, group_name):
     if not check_sid(SID):
@@ -392,8 +412,8 @@ def del_person_from_ulab(SID):
 # The parent field of Group is another Group and the subgroups field is a list of subgroup names.
 # So, to get the Group <group_name> you would also need to get the parent group.
 # (Just call get_group on the parent group name for this.)
-def get_group(group_name, parent=None):
-    if get_sheetid(group_name) == -1:
+def get_group(group_name, parent=None, checked=False):
+    if not checked and get_sheetid(group_name) == -1:
         return None
     values = get_values(group_name)
     SID_index = values[0].index('SID')
@@ -538,7 +558,7 @@ class Group:
             return []
         subgroups = []
         for group_name in self.subgroups:
-            subgroups.append(get_group(group_name, self))
+            subgroups.append(get_group(group_name, self, True))
         return subgroups
 
 
@@ -770,6 +790,16 @@ class Group:
 
     def __repr__(self):
         return " ".join([word.capitalize() for word in self.name.split("-")])
+
+    def __str__(self):
+        return self.str_helper()
+
+    def str_helper(self, level=0):
+        tree = "\t\t"*level+self.name+"\n"
+        for subgroup in self.get_subgroups():
+            if subgroup:
+                tree += subgroup.str_helper(level+1)
+        return tree
 
 """
 After making modifications to a person, use the save() function to commit the changes
